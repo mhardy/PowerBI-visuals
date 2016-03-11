@@ -112,6 +112,7 @@ module powerbi.visuals.samples {
         fill: string;
         width: number;
         showByDefault: boolean;
+        visibleGapsPercentage: number;
     }
 
     export interface PulseChartPlaybackSetting {
@@ -293,6 +294,10 @@ module powerbi.visuals.samples {
                                 bool: true
                             }
                         },
+                        transparency: {//visibleGapsPercentage
+                            displayName: 'Visible gaps',
+                            type: { numeric: true }
+                        },
                     }
                 },
                 general: {
@@ -388,97 +393,21 @@ module powerbi.visuals.samples {
             }
         };
 
-        private static Properties: PulseChartProperties = {
-            general: {
-                formatString: {
-                    objectName: "general",
-                    propertyName: "formatString"
+        private static Properties: PulseChartProperties = PulseChart.getProperties(PulseChart.capabilities);
+        public static getProperties(capabilities: VisualCapabilities): any {
+            var result = {};
+            for(var objectKey in capabilities.objects) {
+                result[objectKey] = {};
+                for(var propKey in capabilities.objects[objectKey].properties) {
+                    result[objectKey][propKey] = <DataViewObjectPropertyIdentifier> { 
+                        objectName: objectKey,
+                        propertyName: propKey
+                    };
                 }
-            },
-            legend: {
-                show: { objectName: 'legend', propertyName: 'show' },
-                position: { objectName: 'legend', propertyName: 'position' },
-                showTitle: { objectName: 'legend', propertyName: 'showTitle' },
-                titleText: { objectName: 'legend', propertyName: 'titleText' },
-            },
-            series: {
-                fill: { objectName: 'series', propertyName: 'fill' },
-                width: { objectName: 'series', propertyName: 'width' },
-                showByDefault: { objectName: 'series', propertyName: 'showByDefault' },
-            },
-            labels: {
-                labelPrecision: {
-                    objectName: "labels",
-                    propertyName: "labelPrecision"
-                }
-            },
-            popup: {
-                showType: {
-                    objectName: "popup",
-                    propertyName: "showType"
-                },
-                width: {
-                    objectName: "popup",
-                    propertyName: "width"
-                },
-                color: {
-                    objectName: "popup",
-                    propertyName: "color"
-                },
-                fontSize: {
-                    objectName: "popup",
-                    propertyName: "fontSize"
-                },
-                fontColor: {
-                    objectName: "popup",
-                    propertyName: "fontColor"
-                },
-                showTime: {
-                    objectName: 'popup',
-                    propertyName: 'showTime'
-                },
-                timeColor: {
-                    objectName: "popup",
-                    propertyName: "timeColor"
-                },
-                timeFill: {
-                    objectName: "popup",
-                    propertyName: "timeFill"
-                },
-                dotSize: {
-                    objectName: "popup",
-                    propertyName: "dotSize"
-                }
-            },
-            xAxis: {
-                show: {
-                    objectName: "xAxis",
-                    propertyName: "show"
-                },
-                step: {
-                    objectName: "xAxis",
-                    propertyName: "step"
-                }
-            },
-            playback: {
-                autoplay: {
-                    objectName: "playback",
-                    propertyName: "autoplay"
-                },
-                playSpeed: {
-                    objectName: "playback",
-                    propertyName: "playSpeed"
-                },
-                pauseDuration: {
-                    objectName: "playback",
-                    propertyName: "pauseDuration"
-                },
-                autoplayPauseDuration: {
-                    objectName: "playback",
-                    propertyName: "autoplayPauseDuration"
-                },
-            },
-        };
+            }
+
+            return result;
+        }
 
         private static DefaultTextProperties: TextProperties = {
             fontFamily: "Segoe UI,Tahoma,Verdana,Geneva,sans-serif",
@@ -503,7 +432,8 @@ module powerbi.visuals.samples {
             series: {
                 fill: "#3779B7",
                 width: 2,
-                showByDefault: true
+                showByDefault: true,
+                visibleGapsPercentage: 100
             },
             xAxis: {
                 step: 30,
@@ -561,7 +491,7 @@ module powerbi.visuals.samples {
         private static dotSizeMin = 1;
         private static dotSizeMax = 10;
 
-        private static MinInterval = 60 * 1000;
+        private static MinGapWidth = 60 * 1000;
 
         private static MaxCountOfTicksOnYAxis: number = 3;
 
@@ -724,7 +654,6 @@ module powerbi.visuals.samples {
             seriesLen = 1;
 
             var seriesIndex: number = 0;
-            var lastValue = null;
 
             var column = category;
             var valuesMetadata = column.source;
@@ -745,6 +674,8 @@ module powerbi.visuals.samples {
             }
 
             var dataPointLabelSettings = (seriesLabelSettings) ? seriesLabelSettings : defaultLabelSettings;
+            var gapWidths = PulseChart.getGapWidths(categoryValues);
+            var maxGapWidth = Math.max.apply(null, gapWidths);
 
             for (var categoryIndex = 0, seriesCategoryIndex = 0, len = column.values.length; categoryIndex < len; categoryIndex++ , seriesCategoryIndex++) {
                 var categoryValue = categoryValues[categoryIndex];
@@ -755,9 +686,9 @@ module powerbi.visuals.samples {
                     .createSelectionId();
 
                 var key = identity.getKey(),
-                    widthOfGap: number = PulseChart.getWidthOfGap(categoryValue, lastValue, isDateTime),
-                    isGap: boolean = PulseChart.isGap(widthOfGap, isDateTime);
-
+                    widthOfGap: number = gapWidths[categoryIndex],
+                    isGap: boolean = widthOfGap > 0 && widthOfGap > (PulseChart.MinGapWidth + (100 - settings.series.visibleGapsPercentage) * (maxGapWidth - PulseChart.MinGapWidth) / 100);
+ 
                 if (isGap && dataPoints.length > 0) {
                     series.push({
                         displayName: grouped[seriesIndex].name,
@@ -777,8 +708,6 @@ module powerbi.visuals.samples {
                     seriesCategoryIndex = 0;
                     dataPoints = [];
                 }
-
-                lastValue = categoryValue;
 
                 // When Scalar, skip null categories and null values so we draw connected lines and never draw isolated dots.
                 if (isScalar && (categoryValue === null || value === null)) {
@@ -907,31 +836,19 @@ module powerbi.visuals.samples {
             return 0;
         }
 
-        private static isGap(widthOfGap: number, isDate: boolean): boolean {
-            // if (!isDate) {
-            //     return widthOfGap > 1;
-            // } else {
-                return widthOfGap > PulseChart.MinInterval;
-            // }
-        }
+        private static getGapWidths(values: Date[] | number[]): number[] {
+            var result: number[] = [];
+            for(var i = 0, prevVal = 0, length = values.length; i < length; i++) {
+                if (!prevVal || !values[i]) {
+                    result.push(0);
+                } else  {
+                    result.push(<number>values[i] - prevVal);
+                }
 
-        private static getWidthOfGap(newValue: Date | number, oldValue: Date | number, isDate): number {
-            if (!newValue || !oldValue) {
-                return 0;
+                prevVal = <number>values[i];
             }
 
-            var firstValue: number,
-                secondValue: number;
-
-            if (isDate) {
-                firstValue = (<Date> oldValue).getTime();
-                secondValue = (<Date> newValue).getTime();
-            } else {
-                firstValue = <number> oldValue;
-                secondValue = <number> newValue;
-            }
-
-            return secondValue - firstValue;
+            return result;
         }
 
         public init(options: VisualInitOptions): void {
@@ -2210,10 +2127,16 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["series"]["showByDefault"],
                 PulseChart.DefaultSettings.series.showByDefault);
 
+            var visibleGapsPercentage = DataViewObjects.getValue<number>(
+                objects,
+                PulseChart.Properties["series"]["transparency"],
+                PulseChart.DefaultSettings.series.visibleGapsPercentage);
+
             return {
                 width,
                 fill,
-                showByDefault
+                showByDefault,
+                visibleGapsPercentage
             };
         }
 
@@ -2360,6 +2283,7 @@ module powerbi.visuals.samples {
                     fill: seriesSettings.fill,
                     width: seriesSettings.width,
                     showByDefault: seriesSettings.showByDefault,
+                    transparency: seriesSettings.visibleGapsPercentage //visibleGapsPercentage
                 }
             };
 
