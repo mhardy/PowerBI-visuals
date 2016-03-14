@@ -109,11 +109,15 @@ module powerbi.visuals.samples {
         ]);
     }
 
+    export interface PulseChartGapsSettings {
+        show: boolean;
+        visibleGapsPercentage: number;
+    }
+
     export interface PulseChartSeriesSetting {
         fill: string;
         width: number;
         showByDefault: boolean;
-        visibleGapsPercentage: number;
     }
 
     export interface PulseChartPlaybackSetting {
@@ -136,6 +140,7 @@ module powerbi.visuals.samples {
         colors?: IColorPalette;
         series: PulseChartSeriesSetting;
         popup: PulseChartPopup;
+        gaps: PulseChartGapsSettings;
         xAxis: PulseChartXAxisSettings;
         playback: PulseChartPlaybackSetting;
         format?: string;
@@ -294,6 +299,16 @@ module powerbi.visuals.samples {
                             type: {
                                 bool: true
                             }
+                        }
+                    }
+                },
+                gaps: {
+                    displayName: "Gaps",
+                    description: "Gaps",
+                    properties: {
+                        show: {
+                            displayName: data.createDisplayNameGetter("Visual_Show"),
+                            type: { bool: true }
                         },
                         transparency: {//visibleGapsPercentage
                             displayName: 'Visible gaps',
@@ -430,11 +445,14 @@ module powerbi.visuals.samples {
                 timeFill: '#010101',
                 dotSize: 5,
             },
+            gaps: {
+                show: false,
+                visibleGapsPercentage: 1
+            },
             series: {
                 fill: "#3779B7",
                 width: 2,
                 showByDefault: true,
-                visibleGapsPercentage: 100
             },
             xAxis: {
                 step: 30,
@@ -688,7 +706,7 @@ module powerbi.visuals.samples {
 
                 var key = identity.getKey(),
                     widthOfGap: number = gapWidths[categoryIndex],
-                    isGap: boolean = widthOfGap > 0 && widthOfGap > (PulseChart.MinGapWidth + (100 - settings.series.visibleGapsPercentage) * (maxGapWidth - PulseChart.MinGapWidth) / 100);
+                    isGap: boolean = settings.gaps.show && widthOfGap > 0 && widthOfGap > (PulseChart.MinGapWidth + (100 - settings.gaps.visibleGapsPercentage) * (maxGapWidth - PulseChart.MinGapWidth) / 100);
  
                 if (isGap && dataPoints.length > 0) {
                     series.push({
@@ -2030,6 +2048,7 @@ module powerbi.visuals.samples {
             settings.popup = this.getPopupSettings(objects);
             settings.xAxis = this.getAxisXSettings(objects);
             settings.series = this.getSeriesSettings(objects);
+            settings.gaps = this.getGapsSettings(objects);
             settings.playback = PulseChart.getPlaybackSettings(objects);
 
             return settings;
@@ -2129,16 +2148,26 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["series"]["showByDefault"],
                 PulseChart.DefaultSettings.series.showByDefault);
 
-            var visibleGapsPercentage = DataViewObjects.getValue<number>(
-                objects,
-                PulseChart.Properties["series"]["transparency"],
-                PulseChart.DefaultSettings.series.visibleGapsPercentage);
-
             return {
                 width,
                 fill,
-                showByDefault,
-                visibleGapsPercentage
+                showByDefault
+            };
+        }
+
+        private getGapsSettings(objects: DataViewObjects): PulseChartGapsSettings {
+            var show =  DataViewObjects.getValue<boolean>(
+                objects,
+                PulseChart.Properties["gaps"]["show"],
+                PulseChart.DefaultSettings.gaps.show);
+
+            var visibleGapsPercentage = Math.max(1, Math.min(100, DataViewObjects.getValue<number>(
+                objects,
+                PulseChart.Properties["gaps"]["transparency"],
+                PulseChart.DefaultSettings.gaps.visibleGapsPercentage)));
+            return {
+                show: show,
+                visibleGapsPercentage: visibleGapsPercentage
             };
         }
 
@@ -2222,6 +2251,10 @@ module powerbi.visuals.samples {
                     this.readSeriesInstance(enumeration);
                     break;
                 }
+                case "gaps": {
+                    this.readGapsInstance(enumeration);
+                    break;
+                }
                 case "playback": {
                     this.readPlaybackInstance(enumeration);
                     break;
@@ -2284,12 +2317,27 @@ module powerbi.visuals.samples {
                 properties: {
                     fill: seriesSettings.fill,
                     width: seriesSettings.width,
-                    showByDefault: seriesSettings.showByDefault,
-                    transparency: seriesSettings.visibleGapsPercentage //visibleGapsPercentage
+                    showByDefault: seriesSettings.showByDefault
                 }
             };
 
             enumeration.pushInstance(series);
+        }
+
+        private readGapsInstance(enumeration: ObjectEnumerationBuilder): void {
+            var gapsSettings: PulseChartGapsSettings =
+                this.data.settings.gaps || PulseChart.DefaultSettings.gaps;
+
+            var gaps: VisualObjectInstance = {
+                objectName: "gaps",
+                selector: null,
+                properties: {
+                    show: gapsSettings.show,
+                    transparency: gapsSettings.visibleGapsPercentage //visibleGapsPercentage
+                }
+            };
+
+            enumeration.pushInstance(gaps);
         }
 
         private readPlaybackInstance(enumeration: ObjectEnumerationBuilder): void {
