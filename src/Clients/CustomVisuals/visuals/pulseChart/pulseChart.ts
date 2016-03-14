@@ -65,6 +65,7 @@ module powerbi.visuals.samples {
         time: string;
         title: string;
         description: string;
+        offsetX?: number;
     }
 
     export interface PulseChartPointXY {
@@ -1797,7 +1798,8 @@ module powerbi.visuals.samples {
                 .attr("transform", (d: PulseChartDataPoint) => {
                     var x: number = xScale(d.x) - width/2;
                     var y: number = tooltipShiftY(d.y, d.groupIndex);
-                    return SVGUtil.translate(x, y);
+                    d.popupInfo.offsetX = Math.min(this.viewport.width - width + this.margin.left + this.margin.right, Math.max(-this.margin.left, x)) - x;
+                    return SVGUtil.translate(x + d.popupInfo.offsetX, y);
                 })
                 .style("opacity", 0)
                 .transition()
@@ -1838,15 +1840,15 @@ module powerbi.visuals.samples {
                 .attr('d', (d: PulseChartDataPoint) => {
                     var path = [
                         {
-                            "x": width / 2 - 5,
+                            "x": width / 2 - 5 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * marginTop) : 0,
                         },
                         {
-                            "x": width / 2,
+                            "x": width / 2 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop - 5)) : -5,
                         },
                         {
-                            "x": width / 2 + 5,
+                            "x": width / 2 + 5 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * marginTop) : 0,
                         },
                     ];
@@ -1863,11 +1865,11 @@ module powerbi.visuals.samples {
                 .attr('d', (d: PulseChartDataPoint) => {
                     var path = [
                         {
-                            "x": width/2,
+                            "x": width/2 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex), //start
                         },
                         {
-                            "x": width/2,
+                            "x": width/2 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex),
                         }];
                     return line(path);
@@ -1877,11 +1879,11 @@ module powerbi.visuals.samples {
                 .attr('d', (d: PulseChartDataPoint) => {
                     var path = [
                         {
-                            "x": width/2,
+                            "x": width/2 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex),
                         },
                         {
-                            "x": width/2,
+                            "x": width/2 - d.popupInfo.offsetX,
                             "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * marginTop) : 0, //end
                         }];
                     return line(path);
