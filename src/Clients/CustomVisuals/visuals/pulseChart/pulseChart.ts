@@ -37,7 +37,6 @@ module powerbi.visuals.samples {
         svg?: D3.Selection;
         behavior?: IInteractiveBehavior;
     }
-
     export interface PulseBehaviorOptions {
         layerOptions?: any[];
         clearCatcher: D3.Selection;
@@ -1518,7 +1517,7 @@ module powerbi.visuals.samples {
                  return value.categoryValue;
              }
              //value.labelFormatString
-             var formatterTime = valueFormatter.create({ format: "hh:mm:ss"/*value.labelFormatString*/ });
+             var formatterTime = valueFormatter.create({ format: /*"hh:mm:ss"*/value.labelFormatString });
              return formatterTime.format(value.categoryValue);
         }
 
@@ -1602,7 +1601,9 @@ module powerbi.visuals.samples {
             var sm: SelectionManager = this.selectionManager;
             sm.clear();
 
-            this.chart.selectAll(PulseChart.Tooltip.selector).remove();
+            if (!this.animationHandler.isAnimated()) {
+                this.chart.selectAll(PulseChart.Tooltip.selector).remove();
+            }
         }
 
         private handleSelection(d: PulseChartDataPoint): void {
@@ -2464,7 +2465,7 @@ module powerbi.visuals.samples {
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 16v-8l5 4-5 4zm5 0v-8l5 4-5 4zm7-8h-2v8h2v-8z")
                 .style("fill", "#777");
 
-            this.animationProgress = container.append('g').classed(PulseAnimator.AnimationProgress.class, true)
+            this.animationProgress = container.append('g').classed(PulseAnimator.AnimationProgress.class, true);
 
             this.animationProgress
                 .append('text')
@@ -2531,9 +2532,8 @@ module powerbi.visuals.samples {
                 });
 
             this.animationProgress
-                .attr('transform', SVGUtil.translate(150, 17))
+                .attr('transform', SVGUtil.translate(150, 17));
         }
-
 
         private static showControl(element: D3.Selection): void {
             element
@@ -2608,7 +2608,6 @@ module powerbi.visuals.samples {
             this.disableControls();
             this.container.attr('display', 'block');
         }
-
 
         public setMaxProgress(value: any): void {
             this.progressMax = value;
