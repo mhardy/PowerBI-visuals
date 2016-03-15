@@ -2264,12 +2264,10 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["popup"]["showType"],
                 PulseChart.DefaultSettings.popup.showType);
 
-            var width = DataViewObjects.getValue<number>(
+            var width = Math.max(1, Math.min(999999, DataViewObjects.getValue<number>(
                 objects,
                 PulseChart.Properties["popup"]["width"],
-                PulseChart.DefaultSettings.popup.width);
-
-            width = Math.max(0, width);
+                PulseChart.DefaultSettings.popup.width)));
 
             var colorHelper = new ColorHelper(
                 this.colors,
