@@ -557,6 +557,7 @@ module powerbi.visuals.samples {
         };
 
         private static MaxWidthOfYAxis: number = 50;
+        private static PopupTextPadding: number = 3;
 
         private svg: D3.Selection;
         private chart: D3.Selection;
@@ -2156,15 +2157,15 @@ module powerbi.visuals.samples {
                 .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupTitleTextProperties()))
                 .style("fill", this.data.settings.popup.fontColor)
                 //.attr("stroke", "white")
-                .attr("x", (d: PulseChartDataPoint) => 0)
-                .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 12)) : 12)
+                .attr("x", (d: PulseChartDataPoint) => PulseChart.PopupTextPadding)
+                .attr("y", (d: PulseChartDataPoint) => (this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 12)) : 12) + PulseChart.PopupTextPadding)
                 .text((d: PulseChartDataPoint) => {
                     if (!d.popupInfo) {
                         return "";
                     }
 
                     return powerbi.TextMeasurementService.getTailoredTextOrDefault(PulseChart.GetPopupTitleTextProperties(d.popupInfo.title),
-                        width - 2 - (this.data.settings.popup.showTime ? this.data.widthOfTooltipValueLabel : 0));
+                        width - 2 - (this.data.settings.popup.showTime ? this.data.widthOfTooltipValueLabel : 0) - PulseChart.PopupTextPadding * 2);
                 });
 
             var textFontSize = `${this.data.settings.popup.fontSize}px`;
@@ -2176,13 +2177,12 @@ module powerbi.visuals.samples {
                     "font-size": textFontSize
                 })
                 .style("fill", this.data.settings.popup.fontColor)
-                .attr("x", (d: PulseChartDataPoint) => 0)
                 .attr("y", (d: PulseChartDataPoint) => 0)
                 .text((d: PulseChartDataPoint) => d.popupInfo && d.popupInfo.description)
                 .call(d => d.forEach(x => x[0] &&
-                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2, height - 26)))
-                .attr("x", (d: PulseChartDataPoint) => 0)
+                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - 26 - PulseChart.PopupTextPadding)))
                 .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 26)) : 26);
+            description.selectAll("tspan").attr("x", PulseChart.PopupTextPadding);
 
             tooltipRoot
                 .exit()
