@@ -563,6 +563,7 @@ module powerbi.visuals.samples {
 
         private viewport: IViewport;
         private margin: IMargin;
+        private size: IViewport;
 
         private static DefaultMargin: IMargin = {
             top: 120,
@@ -984,6 +985,7 @@ module powerbi.visuals.samples {
                 return;
             }
 
+            this.viewport = $.extend({}, options.viewport);
             var dataView: DataView = options.dataViews[0];
 
             this.data = this.converter(dataView);
@@ -992,7 +994,7 @@ module powerbi.visuals.samples {
                 return;
             }
 
-            this.setSize(options.viewport);
+            this.setSize();
 
             this.calculateAxesProperties();
             this.render(true);
@@ -1010,7 +1012,7 @@ module powerbi.visuals.samples {
             return true;
         }
 
-        private setSize(viewport: IViewport): void {
+        private setSize(): void {
             var height: number,
                 width: number,
                 marginBottom: number,
@@ -1035,30 +1037,30 @@ module powerbi.visuals.samples {
                 }
 
 
-            height = viewport.height - this.margin.top - marginBottom;
-            width = viewport.width - marginLeft - this.margin.right - PulseChart.MaxWidthOfYAxis;
+            height = this.viewport.height - this.margin.top - marginBottom;
+            width = this.viewport.width - marginLeft - this.margin.right - PulseChart.MaxWidthOfYAxis;
 
             height = Math.max(height, PulseChart.DefaultViewport.height);
             width  = Math.max(width, PulseChart.DefaultViewport.width);
 
-            this.viewport = {
+            this.size = {
                 height: height,
                 width: width
             };
 
-            this.updateElements(viewport.height, viewport.width);
+            this.updateElements();
         }
 
-        private updateElements(height: number, width: number): void {
+        private updateElements(): void {
             this.svg.attr({
-                'height': height,
-                'width': width
+                'height': this.viewport.height,
+                'width': this.viewport.width
             });
 
-            this.gaps.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.viewport.height / 2)));
+            this.gaps.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.size.height / 2)));
             this.chart.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top));
-            this.yAxis.attr('transform', SVGUtil.translate(this.viewport.width + this.margin.left + PulseChart.MaxWidthOfYAxis, this.margin.top));
-            this.xAxis.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.viewport.height / 2)));
+            this.yAxis.attr('transform', SVGUtil.translate(this.size.width + this.margin.left + PulseChart.MaxWidthOfYAxis, this.margin.top));
+            this.xAxis.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.size.height / 2)));
         }
 
         public calculateAxesProperties() {
@@ -1090,7 +1092,7 @@ module powerbi.visuals.samples {
                 data.isScalar,
                 [data.categories[0], data.categories[data.categories.length - 1]],
                 0,
-                this.viewport.width);
+                this.size.width);
         }
 
         private createScale(isScalar: boolean, domain: (number | Date)[], minX: number, maxX: number): D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale> {
@@ -1116,12 +1118,12 @@ module powerbi.visuals.samples {
                 true,
                 [d3.max(domain), d3.min(domain)],
                 0,
-                this.viewport.height);
+                this.size.height);
         }
 
         private getYAxisScales(): D3.Scale.LinearScale[] {
             var data: PulseChartData = this.data,
-                stepOfHeight: number = this.viewport.height / data.grouped.length;
+                stepOfHeight: number = this.size.height / data.grouped.length;
 
             return <D3.Scale.LinearScale[]> data.grouped.map((group: DataViewValueColumnGroup, index: number) => {
                 var values: number[] = group.values[0].values.filter((value: any) => {
@@ -1167,7 +1169,7 @@ module powerbi.visuals.samples {
 
             if (categoryDomain.length > 0) {
                 scale = d3.scale.ordinal()
-                    .rangePoints([0, this.viewport.height])
+                    .rangePoints([0, this.size.height])
                     .domain(categoryDomain);
             }
 
@@ -1945,12 +1947,12 @@ module powerbi.visuals.samples {
                 return SelectionManager.containsSelection(selectionIds, d.identity);
             }
 
-            /*if (data &&
+            if (data &&
                 data.settings &&
                 data.settings.popup &&
-                (data.settings.popup.showType === PulseChartPopupShow.ALWAYS)) {
+                (data.settings.popup.showType === (<any>PulseChartPopupShow).ALWAYS)) {//Remove "<any>" if "PulseChartPopupShow.ALWAYS" will be defined.
                     return true;
-                }*/
+                }
 
             return false;
         }
@@ -1975,7 +1977,7 @@ module powerbi.visuals.samples {
             var durationTooltip: number = 1000;
             var durationLine: number = 700;*/
 
-            var tooltipShiftY = (y: number, groupIndex: number) => this.isHigherMiddle(y, groupIndex) ? (-1 * marginTop + topShift) : this.viewport.height + marginTop;
+            var tooltipShiftY = (y: number, groupIndex: number) => this.isHigherMiddle(y, groupIndex) ? (-1 * marginTop + topShift) : this.size.height + marginTop;
 
             var tooltipRoot: D3.UpdateSelection = rootSelection.selectAll(node.selector)
                 .data(d => {
@@ -1991,7 +1993,7 @@ module powerbi.visuals.samples {
                 .attr("transform", (d: PulseChartDataPoint) => {
                     var x: number = xScale(d.x) - width / 2;
                     var y: number = tooltipShiftY(d.y, d.groupIndex);
-                    d.popupInfo.offsetX = Math.min(this.viewport.width - width + this.margin.left + this.margin.right, Math.max(-this.margin.left, x)) - x;
+                    d.popupInfo.offsetX = Math.min(this.viewport.width - this.margin.right - width, Math.max(-this.margin.left, x)) - x;
                     return SVGUtil.translate(x + d.popupInfo.offsetX, y);
                 });
                 /*.style("opacity", 0)
