@@ -96,22 +96,28 @@ module powerbi.visuals.samples {
         dotSize: number;
     }
 
+    export function createEnumTypeFromEnum(type: any): IEnumType {
+        var even: any = false;
+        return createEnumType(Object.keys(type)
+            .filter((key,i) => (i % 2 == even && type[key] === key && !void(even = !even)) || i % 2 != even)
+            .map(x => <IEnumMember>{ value: x, displayName: x }));
+    }
+
     export enum PulseChartXAxisDateFormat {
         DateAndTime = <any>'Date and time',
         DateOnly = <any>'Date only',
-        TimeOnly  = <any>'Time only',
-        type = <any>createEnumType(Object.keys(PulseChartXAxisDateFormat)
-            .filter((x,i,values) => i%2===1 && values[i-1] !== 'type')
-            .map(x => <IEnumMember>{ value: x, displayName: x }))
+        TimeOnly  = <any>'Time only'
     }
 
     export enum PulseChartPopupShow {
-        HIDE = <any>'Hide',
-        SELECTED = <any>'Selected',
-        /*ALWAYS  = <any>'Always',*/
-        type = <any>createEnumType(Object.keys(PulseChartPopupShow)
-            .filter((x,i,values) => i%2===1 && values[i-1] !== 'type')
-            .map(x => <IEnumMember>{ value: x, displayName: x }))
+        Hide = <any>'Hide',
+        Selected = <any>'Selected',
+        /*Always  = <any>'Always',*/
+    }
+
+    export enum XAxisPosition {
+        Center = <any>'Center',
+        Bottom = <any>'Bottom',
     }
 
     export interface PulseChartGapsSettings {
@@ -134,6 +140,7 @@ module powerbi.visuals.samples {
 
     export interface PulseChartXAxisSettings {
         show: boolean;
+        position: XAxisPosition;
         step: number;
         dateFormat: PulseChartXAxisDateFormat;
     }
@@ -348,7 +355,7 @@ module powerbi.visuals.samples {
                         },
                         showType: {
                             displayName: "Show",
-                            type: { enumeration: PulseChartPopupShow.type }
+                            type: { enumeration: createEnumTypeFromEnum(PulseChartPopupShow) }
                         },
                         width: {
                             displayName: 'Width',
@@ -393,13 +400,17 @@ module powerbi.visuals.samples {
                             displayName: data.createDisplayNameGetter("Visual_Show"),
                             type: { bool: true }
                         },
+                        position: {
+                            displayName: "Position",
+                            type: { enumeration: createEnumTypeFromEnum(XAxisPosition) }
+                        },
                         step: {
                             displayName: "Step",
                             type: { numeric: true }
                         },
                         dateFormat: {
                             displayName: "Date format",
-                            type: { enumeration: PulseChartXAxisDateFormat.type }
+                            type: { enumeration: createEnumTypeFromEnum(PulseChartXAxisDateFormat) }
                         }
                     }
                 },
@@ -455,7 +466,7 @@ module powerbi.visuals.samples {
             return result;
         }
 
-        private static GetXAxisTextProperties(text?: string, fontSizeValue = 11): TextProperties {
+        private static GetAxisTextProperties(text?: string, fontSizeValue = 11): TextProperties {
             return {
                 text: text || "",
                 fontFamily: "Segoe UI,Tahoma,Verdana,Geneva,sans-serif",
@@ -509,7 +520,7 @@ module powerbi.visuals.samples {
             precision: 0,
             popup: {
                 alwaysOnTop: false,
-                showType: PulseChartPopupShow.SELECTED,
+                showType: PulseChartPopupShow.Selected,
                 width: 100,
                 color: "#808181",
                 fontSize: 10,
@@ -530,6 +541,7 @@ module powerbi.visuals.samples {
             },
             xAxis: {
                 step: 30,
+                position: XAxisPosition.Center,
                 show: true,
                 dateFormat: PulseChartXAxisDateFormat.TimeOnly
             },
@@ -707,7 +719,7 @@ module powerbi.visuals.samples {
                 eventDescriptionValues = dataView.categorical.categories[eventDescriptionMeasureIndex].values;
             }
 
-            var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetXAxisTextProperties()) + 3;
+            var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
 
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
@@ -1060,7 +1072,16 @@ module powerbi.visuals.samples {
             this.gaps.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.size.height / 2)));
             this.chart.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top));
             this.yAxis.attr('transform', SVGUtil.translate(this.size.width + this.margin.left + PulseChart.MaxWidthOfYAxis, this.margin.top));
-            this.xAxis.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.size.height / 2)));
+
+            var xAxisTop: number = this.size.height;
+            switch(this.data.settings.xAxis.position) {
+                case XAxisPosition.Center:
+                    xAxisTop = xAxisTop/2;
+                    break;
+                case XAxisPosition.Bottom:
+                    break;
+            }
+            this.xAxis.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + xAxisTop));
         }
 
         public calculateAxesProperties() {
@@ -1178,12 +1199,13 @@ module powerbi.visuals.samples {
                 value2: scale.domain()[1]
             });
 
-            return d3.svg.axis()
-                .scale(scale)
+            var yAxis = d3.svg.axis().scale(scale);
+            var tickOuterWidth = yAxis.tickPadding() * 2 + yAxis.tickSize();
+            return yAxis
                 .tickFormat((value: any) => {
                     return TextMeasurementService.getTailoredTextOrDefault(
-                        PulseChart.GetXAxisTextProperties(formatter.format(value)),
-                        PulseChart.MaxWidthOfYAxis);
+                        PulseChart.GetAxisTextProperties(formatter.format(value)),
+                        PulseChart.MaxWidthOfYAxis - tickOuterWidth);
                 })
                 .ticks(PulseChart.MaxCountOfTicksOnYAxis);
         }
@@ -1939,7 +1961,7 @@ module powerbi.visuals.samples {
             if (data &&
                 data.settings &&
                 data.settings.popup &&
-                (data.settings.popup.showType === PulseChartPopupShow.HIDE)) {
+                (data.settings.popup.showType === PulseChartPopupShow.Hide)) {
                     return false;
                 }
 
@@ -1950,7 +1972,7 @@ module powerbi.visuals.samples {
             if (data &&
                 data.settings &&
                 data.settings.popup &&
-                (data.settings.popup.showType === (<any>PulseChartPopupShow).ALWAYS)) {//Remove "<any>" if "PulseChartPopupShow.ALWAYS" will be defined.
+                (data.settings.popup.showType === (<any>PulseChartPopupShow).Always)) {//Remove "<any>" if "PulseChartPopupShow.Always" will be defined.
                     return true;
                 }
 
@@ -2353,6 +2375,11 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["xAxis"]["show"],
                 PulseChart.DefaultSettings.xAxis.show);
 
+            xAxisSettings.position = DataViewObjects.getValue<XAxisPosition>(
+                objects,
+                PulseChart.Properties["xAxis"]["position"],
+                PulseChart.DefaultSettings.xAxis.position);
+
             xAxisSettings.step = DataViewObjects.getValue<number>(
                 objects,
                 PulseChart.Properties["xAxis"]["step"],
@@ -2496,6 +2523,7 @@ module powerbi.visuals.samples {
                 selector: null,
                 properties: {
                     show: xAxisSettings.show,
+                    position: xAxisSettings.position,
                     step: xAxisSettings.step,
                     dateFormat: xAxisSettings.dateFormat
                 }
