@@ -112,7 +112,7 @@ module powerbi.visuals.samples {
     export enum PulseChartPopupShow {
         Hide = <any>'Hide',
         Selected = <any>'Selected',
-        /*Always  = <any>'Always',*/
+        //Always  = <any>'Always',
     }
 
     export enum XAxisPosition {
@@ -192,6 +192,7 @@ module powerbi.visuals.samples {
         formatter?: IValueFormatter;
         widthOfXAxisLabel: number;
         widthOfTooltipValueLabel: number;
+        heightOfTooltipDescriptionTextLine: number;
     }
 
     interface PulseChartProperty {
@@ -494,6 +495,15 @@ module powerbi.visuals.samples {
             }
         }
 
+        private static GetPopupDescriptionTextProperties(text?: string, fontSizeValue = 12): TextProperties {
+            return {
+                text: text || "",
+                fontFamily: "sans-serif",
+                fontSize:  fontSizeValue + "px",
+                fontSizeValue: fontSizeValue
+            }
+        }
+
         private static ConvertTextPropertiesToStyle(textProperties: TextProperties) : Object {
             return {
                  'font-family': textProperties.fontFamily,
@@ -722,6 +732,7 @@ module powerbi.visuals.samples {
 
             var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
+            var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
 
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
 
@@ -937,7 +948,8 @@ module powerbi.visuals.samples {
                 settings: settings,
                 grouped: grouped,
                 widthOfXAxisLabel: widthOfXAxisLabel,
-                widthOfTooltipValueLabel: widthOfTooltipValueLabel
+                widthOfTooltipValueLabel: widthOfTooltipValueLabel,
+                heightOfTooltipDescriptionTextLine: heightOfTooltipDescriptionTextLine
             };
         }
 
@@ -2168,20 +2180,17 @@ module powerbi.visuals.samples {
                         width - 2 - (this.data.settings.popup.showTime ? this.data.widthOfTooltipValueLabel : 0) - PulseChart.PopupTextPadding * 2);
                 });
 
-            var textFontSize = `${this.data.settings.popup.fontSize}px`;
+            var descriptionYOffset = PulseChart.DefaultTooltipSettings.timeHeight + this.data.settings.popup.fontSize + PulseChart.PopupTextPadding;
             var description = tooltipRoot.selectAll(PulseChart.TooltipDescription.selector).data(d => [d]);
             description.enter().append("text").classed(PulseChart.TooltipDescription.class, true);
             description
-                .style({
-                    "font-family": "sans-serif",
-                    "font-size": textFontSize
-                })
+                .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupDescriptionTextProperties(null, this.data.settings.popup.fontSize)))
                 .style("fill", this.data.settings.popup.fontColor)
-                .attr("y", (d: PulseChartDataPoint) => 0)
+                .attr("y", 0)
                 .text((d: PulseChartDataPoint) => d.popupInfo && d.popupInfo.description)
                 .call(d => d.forEach(x => x[0] &&
-                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - 26 - PulseChart.PopupTextPadding)))
-                .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 26)) : 26);
+                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - descriptionYOffset - PulseChart.PopupTextPadding)))
+                .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - descriptionYOffset)) : descriptionYOffset);
             description.selectAll("tspan").attr("x", PulseChart.PopupTextPadding);
 
             tooltipRoot
@@ -2269,10 +2278,10 @@ module powerbi.visuals.samples {
 
             var color = colorHelper.getColorForMeasure(objects, "");
 
-            var fontSize = DataViewObjects.getValue<number>(
+            var fontSize = parseInt(DataViewObjects.getValue<any>(
                 objects,
                 PulseChart.Properties["popup"]["fontSize"],
-                PulseChart.DefaultSettings.popup.fontSize);
+                PulseChart.DefaultSettings.popup.fontSize), 10);
 
             var fontColorHelper = new ColorHelper(
                 this.colors,
