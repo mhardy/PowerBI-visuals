@@ -1071,7 +1071,6 @@ module powerbi.visuals.samples {
             this.xAxis = svg.append('g').attr('class', 'x axis');
             this.yAxis = svg.append('g').attr('class', 'y axis');
 
-
             this.dots = svg.append('g').attr('class', 'dots');
 
             this.animationDot = this.dots.append('circle').classed(PulseChart.AnimationDot.class, true).attr('display', 'none');
@@ -1167,7 +1166,7 @@ module powerbi.visuals.samples {
             this.gaps.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + (this.size.height / 2)));
             this.chart.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top));
 
-            this.yAxis.attr('transform', SVGUtil.translate(this.size.width + this.margin.left + PulseChart.MaxWidthOfYAxis, this.margin.top));
+            this.yAxis.attr('transform', SVGUtil.translate(this.size.width + this.margin.left, this.margin.top));
 
             var xAxisTop: number = this.size.height;
             switch(this.data.settings.xAxis.position) {
@@ -1298,12 +1297,12 @@ module powerbi.visuals.samples {
             });
 
             var yAxis = d3.svg.axis().scale(scale);
-            var tickOuterWidth = yAxis.tickPadding() * 2 + yAxis.tickSize();
+
             return yAxis
                 .tickFormat((value: any) => {
                     return TextMeasurementService.getTailoredTextOrDefault(
                         PulseChart.GetAxisTextProperties(formatter.format(value)),
-                        PulseChart.MaxWidthOfYAxis - tickOuterWidth);
+                        PulseChart.MaxWidthOfYAxis);
                 })
                 .ticks(PulseChart.MaxCountOfTicksOnYAxis);
         }
@@ -1580,7 +1579,7 @@ module powerbi.visuals.samples {
 				color: string = PulseChart.DefaultSettings.yAxis.color,
 			    fontColor: string = PulseChart.DefaultSettings.yAxis.fontColor;;
 
-            yAxis.orient('left');
+            yAxis.orient('right');
 
             if (this.data &&
                 this.data.settings &&
