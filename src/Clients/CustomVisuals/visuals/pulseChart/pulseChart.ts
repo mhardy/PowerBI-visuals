@@ -1804,9 +1804,7 @@ module powerbi.visuals.samples {
         }
 
         public stopAnimation() {
-			this.clearSelection();
             this.pauseAnimation();
-            this.clearChart();
         }
 
         private drawLines(data: PulseChartData): void {
@@ -2000,9 +1998,9 @@ module powerbi.visuals.samples {
                 this.setSelection(selectionIds);
 
                 setTimeout(() => {
-                    this.clearSelection();
 
 					if (this.animationHandler.isPaused()) {
+						this.clearSelection();
 	                    this.animationHandler.play();
 					}
                 }, this.getPauseDuration());
@@ -3028,6 +3026,8 @@ module powerbi.visuals.samples {
 
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.play();
+			} else if (isAutoPlay && (this.animatorState === PulseAnimatorStates.Ready)) {
+                this.play();
             } else {
                 this.chart.renderChart();
             }
@@ -3056,6 +3056,11 @@ module powerbi.visuals.samples {
                 .attr('transform', SVGUtil.translate(30, 0))
                 .on("click", () => {
 
+                    if (this.isPaused()) {
+                        this.stop();
+						return false;
+                    }
+
                     if (!this.isPlaying()) {
                         return false;
                     }
@@ -3067,9 +3072,6 @@ module powerbi.visuals.samples {
                 .attr('transform', SVGUtil.translate(60, 0))
                 .on("click", () => {
 
-                    if (!this.isAnimated()) {
-                        return false;
-                    }
                     this.reset();
                 });
 
@@ -3110,12 +3112,14 @@ module powerbi.visuals.samples {
         }
 
         private disableControls(): void {
+			PulseAnimator.showControl(this.animationReset);
+
             switch (this.animatorState) {
                 case PulseAnimatorStates.Play:
                     PulseAnimator.hideControl(this.animationPlay);
 
                     PulseAnimator.showControl(this.animationPause);
-                    PulseAnimator.showControl(this.animationReset);
+                    //PulseAnimator.showControl(this.animationReset);
                     PulseAnimator.showControl(this.animationToEnd);
 
                     PulseAnimator.showControl(this.animationProgress);
@@ -3123,8 +3127,8 @@ module powerbi.visuals.samples {
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.showControl(this.animationPlay);
 
-                    PulseAnimator.hideControl(this.animationPause);
-                    PulseAnimator.showControl(this.animationReset);
+                    PulseAnimator.showControl(this.animationPause);
+                    //PulseAnimator.showControl(this.animationReset);
 
                     PulseAnimator.showControl(this.animationProgress);
                     PulseAnimator.showControl(this.animationToEnd);
@@ -3133,7 +3137,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.showControl(this.animationPlay);
 
                     PulseAnimator.hideControl(this.animationPause);
-                    PulseAnimator.hideControl(this.animationReset);
+                    //PulseAnimator.hideControl(this.animationReset);
                     PulseAnimator.hideControl(this.animationToEnd);
 
                     PulseAnimator.hideControl(this.animationProgress, true);
@@ -3142,7 +3146,7 @@ module powerbi.visuals.samples {
                 default:
                     PulseAnimator.showControl(this.animationPlay);
                     PulseAnimator.showControl(this.animationPause);
-                    PulseAnimator.showControl(this.animationReset);
+                    //PulseAnimator.showControl(this.animationReset);
                     PulseAnimator.showControl(this.animationToEnd);
 
                     PulseAnimator.hideControl(this.animationProgress, true);
@@ -3152,7 +3156,7 @@ module powerbi.visuals.samples {
 
         public hide(): void {
             if (this.isAnimated()) {
-                this.stop();
+                this.reset();
             }
             this.container.attr('display', 'none');
         }
@@ -3218,8 +3222,10 @@ module powerbi.visuals.samples {
 
         private reset(): void {
             this.chart.stopAnimation();
+			this.chart.clearSelection();
+			this.chart.clearChart();
 
-            this.animatorState = PulseAnimatorStates.Paused;
+            this.animatorState = PulseAnimatorStates.Ready;
             this.setCurrentIndex(PulseAnimator.animationMinIndex);
             this.animationSeries = 0;
 
@@ -3227,16 +3233,22 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
-            this.stop();
+            this.chart.stopAnimation();
+			this.chart.clearSelection();
+			this.chart.clearChart();
+
+            this.animatorState = PulseAnimatorStates.Ready;
+            this.setCurrentIndex(PulseAnimator.animationMinIndex);
+            this.animationSeries = 0;
+
+            this.disableControls();
+
             this.chart.renderChart();
         }
 
         public stop(): void {
             this.chart.stopAnimation();
-
-            this.animatorState = PulseAnimatorStates.Ready;
-            this.setCurrentIndex(PulseAnimator.animationMinIndex);
-            this.animationSeries = 0;
+			this.animatorState = PulseAnimatorStates.Ready;
 
             this.disableControls();
         }
