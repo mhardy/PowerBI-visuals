@@ -1349,8 +1349,8 @@ module powerbi.visuals.samples {
                     value2: maxValue
                 });
 
-                values = isScalar 
-                    ? d3.range(<number>minValue, <number>maxValue, step) 
+                values = isScalar
+                    ? d3.range(<number>minValue, <number>maxValue, step)
                     : d3.time.minute.range(<Date>minValue, <Date>maxValue, step);
 
                 return <PulseChartXAxisProperties> {
@@ -1947,13 +1947,27 @@ module powerbi.visuals.samples {
             };
         }
 
+		private setDotSize(size: number): void {
+			var sizeDuration: number = 200;
+			if (size) {
+				this.animationDot
+						.transition()
+						.duration(sizeDuration)
+                    	.attr("r", size);
+			}
+		}
+
         public clearSelection(): void {
             var sm: SelectionManager = this.selectionManager;
             sm.clear();
 
-            //if (!this.animationHandler.isAnimated()) {
-                this.chart.selectAll(PulseChart.Tooltip.selector).remove();
-            //}
+			if (this.data &&
+				this.data.settings &&
+				this.data.settings.dots &&
+				this.data.settings.dots.size) {
+					this.setDotSize(this.data.settings.dots.size);
+				}
+            this.chart.selectAll(PulseChart.Tooltip.selector).remove();
         }
 
         private handleSelection(d: PulseChartDataPoint): void {
@@ -1967,6 +1981,8 @@ module powerbi.visuals.samples {
             }
 
             this.animationHandler.pause();
+
+			this.setDotSize(d.eventSize);
 
             sm.select(d.identity).then((selectionIds: SelectionId[]) => {
                 this.setSelection(selectionIds);
