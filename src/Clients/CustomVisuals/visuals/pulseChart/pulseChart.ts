@@ -1195,8 +1195,7 @@ module powerbi.visuals.samples {
                 this.data.series,
                 <D3.Scale.LinearScale> this.data.xScale,
                 this.data.settings.format,
-                this.data.settings.xAxis.step,
-                this.data.settings.xAxis.show);
+                this.data.settings.xAxis.step);
 
             this.data.series.forEach((series: PulseChartSeries, index: number) => {
                 series.xAxis = xAxes[index];
@@ -1312,8 +1311,7 @@ module powerbi.visuals.samples {
             series: PulseChartSeries[],
             originalScale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>,
             formatString: string,
-            step: number = 30,
-            show: boolean = true): D3.Svg.Axis[] {
+            step: number = 30): D3.Svg.Axis[] {
 
             var xAxisProperties: PulseChartXAxisProperties[] = [];
 
@@ -1335,13 +1333,9 @@ module powerbi.visuals.samples {
                     value2: maxValue
                 });
 
-                if (show) {
-                    if (isScalar) {
-                        values = d3.range(<number>minValue, <number>maxValue, step);
-                    } else {
-                        values = d3.time.minute.range(<Date>minValue, <Date>maxValue, step);
-                    }
-                }
+                values = isScalar 
+                    ? d3.range(<number>minValue, <number>maxValue, step) 
+                    : d3.time.minute.range(<Date>minValue, <Date>maxValue, step);
 
                 return <PulseChartXAxisProperties> {
                     values: values,
@@ -1562,6 +1556,7 @@ module powerbi.visuals.samples {
 
             this.xAxis
 				.attr('stroke', color)
+                .attr('display', this.data.settings.xAxis.show ? 'inline' : 'none')
                 .selectAll("text")
 				.attr('stroke', fontColor)
                 .attr({
