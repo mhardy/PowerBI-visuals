@@ -99,6 +99,8 @@ module powerbi.visuals.samples {
     export interface PulseChartDotsSettings {
         color: string;
         size: number;
+        minSize: number;
+        maxSize: number;
     }
 
     export function createEnumTypeFromEnum(type: any): IEnumType {
@@ -419,8 +421,16 @@ module powerbi.visuals.samples {
                             displayName: data.createDisplayNameGetter('Visual_Fill'),
                             type: { fill: { solid: { color: true } } }
                         },
+                        minSize: {
+                            displayName: "Min Size",
+                            type: { numeric: true }
+                        },
+                        maxSize: {
+                            displayName: "Max Size",
+                            type: { numeric: true }
+                        },
                         size: {
-                            displayName: "Size",
+                            displayName: "Default Size",
                             type: { numeric: true }
                         },
                     }
@@ -593,6 +603,8 @@ module powerbi.visuals.samples {
 			dots: {
 				color: "#808181",
 				size: 5,
+				minSize: 5,
+				maxSize: 20,
 			},
             gaps: {
                 show: false,
@@ -666,9 +678,6 @@ module powerbi.visuals.samples {
             height: 64,
             timeHeight: 15,
         };
-
-        private static dotSizeMin = 1;
-        private static dotSizeMax = 10;
 
         private static MinGapWidth = 60 * 1000;
 
@@ -806,11 +815,18 @@ module powerbi.visuals.samples {
                 eventSizeValues = dataView.categorical.categories[eventSizeMeasureIndex].values;
             }
 
+			var minSize: number = PulseChart.DefaultSettings.dots.minSize;
+			var maxSize: number = PulseChart.DefaultSettings.dots.maxSize;
+			if (settings.dots) {
+					minSize = settings.dots.minSize;
+					maxSize = settings.dots.maxSize;
+				}
+
             var eventSizeScale: D3.Scale.LinearScale = <D3.Scale.LinearScale> this.createScale(
                 true,
                 [d3.min(eventSizeValues), d3.max(eventSizeValues)],
-                1,
-                10);
+                minSize,
+                maxSize);
 
             var xAxisCardProperties: DataViewObject = CartesianHelper.getCategoryAxisProperties(dataView.metadata);
             isScalar = CartesianHelper.isScalar(isScalar, xAxisCardProperties);
@@ -2461,22 +2477,39 @@ module powerbi.visuals.samples {
                 defaultSettings.color);
 
             var color = colorHelper.getColorForMeasure(objects, "");
-            var size = DataViewObjects.getValue<number>(
+
+            var minSize: number = DataViewObjects.getValue<number>(
+                objects,
+                properties["minSize"],
+                defaultSettings.minSize);
+
+            var maxSize: number = DataViewObjects.getValue<number>(
+                objects,
+                properties["maxSize"],
+                defaultSettings.maxSize);
+
+			if (maxSize < minSize) {
+				maxSize = minSize;
+			}
+
+            var size: number = DataViewObjects.getValue<number>(
                 objects,
                 properties["size"],
                 defaultSettings.size);
 
-            if (size < PulseChart.dotSizeMin) {
-                size = PulseChart.dotSizeMin;
+            if (size < minSize) {
+                size = minSize;
             }
 
-            if (size > PulseChart.dotSizeMax) {
-                size = PulseChart.dotSizeMax;
+            if (size > maxSize) {
+                size = maxSize;
             }
 
             return {
                 color: color,
                 size: size,
+				minSize: minSize,
+				maxSize: maxSize,
             };
 		}
 
@@ -2734,6 +2767,8 @@ module powerbi.visuals.samples {
                 properties: {
                     color: settings.color,
                     size: settings.size,
+                    minSize: settings.minSize,
+                    maxSize: settings.maxSize,
                 }
             };
 
