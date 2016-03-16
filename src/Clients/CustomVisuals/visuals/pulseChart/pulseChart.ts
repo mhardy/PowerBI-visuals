@@ -2379,7 +2379,7 @@ module powerbi.visuals.samples {
                 .attr("y", 0)
                 .text((d: PulseChartDataPoint) => d.popupInfo && d.popupInfo.description)
                 .call(d => d.forEach(x => x[0] &&
-                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - PulseChart.DefaultTooltipSettings.timeHeight - PulseChart.PopupTextPadding)))
+                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - PulseChart.DefaultTooltipSettings.timeHeight - PulseChart.PopupTextPadding * 2)))
                 .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - descriptionYOffset)) : descriptionYOffset);
             description.selectAll("tspan").attr("x", PulseChart.PopupTextPadding);
 
