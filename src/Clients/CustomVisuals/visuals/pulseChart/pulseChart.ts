@@ -1580,13 +1580,16 @@ module powerbi.visuals.samples {
                 .remove();
 
             this.xAxis
-				.attr('stroke', color)
-                .attr('display', this.data.settings.xAxis.show ? 'inherit' : 'none')
+				.style('stroke', color)
+                .style('display', this.data.settings.xAxis.show ? 'inherit' : 'none')
                 .selectAll("text")
-				.attr('stroke', fontColor)
+				.style('stroke', fontColor)
                 .attr({
                     dy: "-0.5em"
                 });
+
+            this.xAxis.selectAll(".domain")
+                .style('stroke', color);
 
             this.xAxis.selectAll(".domain")[0].forEach((element: Element) => {
                 element.parentNode.insertBefore(element, element.parentNode.firstChild);
@@ -1622,8 +1625,8 @@ module powerbi.visuals.samples {
                 .call(yAxis)
                 .attr('display', isShow ? 'inline' : 'none');
 
-			 this.yAxis.selectAll('.domain, .path, .line').attr('stroke', color);
-			 this.yAxis.selectAll('text').attr('fill', fontColor);
+			 this.yAxis.selectAll('.domain, .path, .line').style('stroke', color);
+			 this.yAxis.selectAll('text').style('fill', fontColor);
         }
 
         public renderChart(): void {
