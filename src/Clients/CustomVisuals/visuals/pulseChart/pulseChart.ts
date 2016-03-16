@@ -1211,6 +1211,7 @@ module powerbi.visuals.samples {
                 this.data.series,
                 <D3.Scale.LinearScale> this.data.xScale,
                 this.data.settings.format,
+                this.data.settings.xAxis.dateFormat,
                 this.data.settings.xAxis.step);
 
             this.data.series.forEach((series: PulseChartSeries, index: number) => {
@@ -1327,6 +1328,7 @@ module powerbi.visuals.samples {
             series: PulseChartSeries[],
             originalScale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>,
             formatString: string,
+            dateFormat: PulseChartXAxisDateFormat,
             step: number = 30): D3.Svg.Axis[] {
 
             var xAxisProperties: PulseChartXAxisProperties[] = [];
@@ -1351,7 +1353,7 @@ module powerbi.visuals.samples {
 
                 values = isScalar
                     ? d3.range(<number>minValue, <number>maxValue, step)
-                    : d3.time.minute.range(<Date>minValue, <Date>maxValue, step);
+                    : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue, step);
 
                 return <PulseChartXAxisProperties> {
                     values: values,
@@ -1566,13 +1568,20 @@ module powerbi.visuals.samples {
                     height: "1.3em"
                 });
 
+            var xScale = data.xScale;
+            ticksSelection.attr("display", function(d) {
+                var rect = $(this).children("rect");
+                var rectXRight = parseInt(rect.attr("width"), 10) + parseInt(rect.attr("x"), 10);
+                return xScale(d) + rectXRight > xScale.range()[1] ? "none" : "inherit";
+            });
+
             ticksUpdateSelection
                 .exit()
                 .remove();
 
             this.xAxis
 				.attr('stroke', color)
-                .attr('display', this.data.settings.xAxis.show ? 'inline' : 'none')
+                .attr('display', this.data.settings.xAxis.show ? 'inherit' : 'none')
                 .selectAll("text")
 				.attr('stroke', fontColor)
                 .attr({
