@@ -128,6 +128,11 @@ module powerbi.visuals.samples {
         Bottom = <any>'Bottom',
     }
 
+    export enum AnimationCounterPosition {
+        TopLeft = <any>'Top Left',
+        TopRight = <any>'Top Right'
+    }
+
     export interface PulseChartGapsSettings {
         show: boolean;
         visibleGapsPercentage: number;
@@ -139,13 +144,20 @@ module powerbi.visuals.samples {
         showByDefault: boolean;
     }
 
-    export interface PulseChartPlaybackSetting {
+    export interface PulseChartPlaybackSettings {
         pauseDuration: number;
         playSpeed: number;
         autoplay: boolean;
         autoplayPauseDuration: number;
 
         color: string;
+    }
+
+    export interface PulseChartAnimationCounterSettings {
+        show: boolean;
+        position: AnimationCounterPosition; 
+        fontSize: number;
+        fontColor: string;
     }
 
     export interface PulseChartAxisSettings {
@@ -175,7 +187,8 @@ module powerbi.visuals.samples {
         gaps: PulseChartGapsSettings;
         xAxis: PulseChartXAxisSettings;
         yAxis: PulseChartYAxisSettings;
-        playback: PulseChartPlaybackSetting;
+        animationCounter: PulseChartAnimationCounterSettings;
+        playback: PulseChartPlaybackSettings;
         format?: string;
     }
 
@@ -511,6 +524,27 @@ module powerbi.visuals.samples {
                         },
                     }
                 },
+                animationCounter: {
+                    displayName: 'Animation Counter',
+                    properties: {
+                        show: {
+                            displayName: data.createDisplayNameGetter("Visual_Show"),
+                            type: { bool: true }
+                        },
+                        position: {
+                            displayName: "Position",
+                            type: { enumeration: createEnumTypeFromEnum(AnimationCounterPosition) }
+                        },
+                        fontSize: {
+                            displayName: "Text Size",
+                            type: { formatting: { fontSize: true } }
+                        },
+                        fontColor: {
+                            displayName: "Font Color",
+                            type: { fill: { solid: { color: true } } }
+                        },
+                    }
+                },
             },
             sorting: {
                 default: {},
@@ -570,7 +604,15 @@ module powerbi.visuals.samples {
             }
         }
 
-        private static ConvertTextPropertiesToStyle(textProperties: TextProperties) : Object {
+        public static GetAnimationCounterTextProperties(text?: string, fontSizeValue = 12): TextProperties {
+            return { 
+                fontFamily: "sans-serif",
+                fontSize:  fontSizeValue + "px",
+                fontSizeValue: fontSizeValue
+            };
+        }
+
+        public static ConvertTextPropertiesToStyle(textProperties: TextProperties) : Object {
             return {
                  'font-family': textProperties.fontFamily,
                  'font-weight': textProperties.fontWeight,
@@ -640,11 +682,19 @@ module powerbi.visuals.samples {
                 pauseDuration: 10,
                 autoplayPauseDuration: 0,
                 color: "#777",
+            },
+            animationCounter: {
+                show: true,
+                position: AnimationCounterPosition.TopRight,
+                fontSize: 13,
+                fontColor: "#777777"
             }
         };
 
         private static MaxWidthOfYAxis: number = 50;
         private static PopupTextPadding: number = 3;
+
+        public data: PulseChartData;
 
         private svg: D3.Selection;
         private chart: D3.Selection;
@@ -655,7 +705,6 @@ module powerbi.visuals.samples {
 
         private animationDot: D3.Selection;
         private lineX: D3.Svg.Line;
-        private data: PulseChartData;
         private selectionManager: SelectionManager;
         private animator: IGenericAnimator;
         private animationHandler: PulseAnimator;
@@ -2390,6 +2439,7 @@ module powerbi.visuals.samples {
             settings.series = this.getSeriesSettings(objects);
             settings.gaps = this.getGapsSettings(objects);
             settings.playback = this.getPlaybackSettings(objects);
+            settings.animationCounter = this.getAnimationCounterSettings(objects);
 
             return settings;
         }
@@ -2631,10 +2681,10 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getPlaybackSettings(objects: DataViewObjects): PulseChartPlaybackSetting {
-            var playbackSettings: PulseChartPlaybackSetting = <PulseChartPlaybackSetting> {};
+        private getPlaybackSettings(objects: DataViewObjects): PulseChartPlaybackSettings {
+            var playbackSettings: PulseChartPlaybackSettings = <PulseChartPlaybackSettings> {};
             var properties = PulseChart.Properties["playback"],
-                defaultSettings: PulseChartPlaybackSetting = PulseChart.DefaultSettings.playback;
+                defaultSettings: PulseChartPlaybackSettings = PulseChart.DefaultSettings.playback;
 
             playbackSettings.autoplay = DataViewObjects.getValue<boolean>(
                 objects,
@@ -2664,6 +2714,36 @@ module powerbi.visuals.samples {
             playbackSettings.color = colorHelper.getColorForMeasure(objects, "");
 
             return playbackSettings;
+        }
+
+        private getAnimationCounterSettings(objects: DataViewObjects): PulseChartAnimationCounterSettings {
+            var show: boolean =  DataViewObjects.getValue<boolean>(
+                objects,
+                PulseChart.Properties["animationCounter"]["show"],
+                PulseChart.DefaultSettings.animationCounter.show);
+
+            var position = DataViewObjects.getValue<AnimationCounterPosition>(
+                objects,
+                PulseChart.Properties["animationCounter"]["position"],
+                PulseChart.DefaultSettings.animationCounter.position);
+
+            var fontSize = parseInt(DataViewObjects.getValue<any>(
+                objects,
+                PulseChart.Properties["animationCounter"]["fontSize"],
+                PulseChart.DefaultSettings.animationCounter.fontSize), 10);
+
+            var fontColor = new ColorHelper(
+                this.colors,
+                PulseChart.Properties["animationCounter"]["fontColor"],
+                PulseChart.DefaultSettings.animationCounter.fontColor)
+                .getColorForMeasure(objects, "");
+
+            return {
+                show: show,
+                position: position,
+                fontSize: fontSize,
+                fontColor: fontColor
+            };
         }
 
         private clear(): void {
@@ -2718,6 +2798,10 @@ module powerbi.visuals.samples {
                 }
                 case "playback": {
                     this.readPlaybackInstance(enumeration);
+                    break;
+                }
+                case "animationCounter": {
+                    this.readAnimationCounterInstance(enumeration);
                     break;
                 }
             }
@@ -2845,7 +2929,7 @@ module powerbi.visuals.samples {
         }
 
         private readPlaybackInstance(enumeration: ObjectEnumerationBuilder): void {
-            var playbackSettings: PulseChartPlaybackSetting =
+            var playbackSettings: PulseChartPlaybackSettings =
                 this.data.settings.playback || PulseChart.DefaultSettings.playback;
 
             enumeration.pushInstance({
@@ -2858,6 +2942,22 @@ module powerbi.visuals.samples {
                     pauseDuration: playbackSettings.pauseDuration,
                     autoplayPauseDuration: playbackSettings.autoplayPauseDuration,
                     color: playbackSettings.color,
+                }
+            });
+        }
+
+        private readAnimationCounterInstance(enumeration: ObjectEnumerationBuilder): void {
+            var animationCounterSettings: PulseChartAnimationCounterSettings =
+                this.data.settings.animationCounter || PulseChart.DefaultSettings.animationCounter;
+
+            enumeration.pushInstance({
+                objectName: "animationCounter",
+                selector: null,
+                properties: {
+                    show: animationCounterSettings.show,
+                    position: animationCounterSettings.position,
+                    fontSize: animationCounterSettings.fontSize,
+                    fontColor: animationCounterSettings.fontColor
                 }
             });
         }
@@ -2878,13 +2978,14 @@ module powerbi.visuals.samples {
         private animationPause: D3.Selection;
         private animationReset: D3.Selection;
         private animationToEnd: D3.Selection;
-        private animationProgress: D3.Selection;
+        private animationCounter: D3.Selection;
+        private animationCounterText: D3.Selection;
 
         private static AnimationPlay: ClassAndSelector = createClassAndSelector('animationPlay');
         private static AnimationPause: ClassAndSelector = createClassAndSelector('animationPause');
         private static animationReset: ClassAndSelector = createClassAndSelector('animationReset');
         private static AnimationToEnd: ClassAndSelector = createClassAndSelector('animationToEnd');
-        private static AnimationProgress: ClassAndSelector = createClassAndSelector('animationProgress');
+        private static AnimationCounter: ClassAndSelector = createClassAndSelector('animationCounter');
         private animatorState: PulseAnimatorStates;
 
         private animationIndex;
@@ -2965,16 +3066,10 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 16v-8l5 4-5 4zm5 0v-8l5 4-5 4zm7-8h-2v8h2v-8z");
 
-            this.animationProgress = container.append('g').classed(PulseAnimator.AnimationProgress.class, true)
-
-            this.animationProgress
-                .append('text')
-                .style({
-                    "font-family": "sans-serif",
-                    "font-size": "12px"
-                });
-
-            this.setControlsColor(PulseAnimator.DefaultControlsColor);
+            this.animationCounter = container.append('g').classed(PulseAnimator.AnimationCounter.class, true);
+            this.animationCounterText = this.animationCounter.append('text');
+            this.animationCounterText.style('alignment-baseline', "hanging");
+			this.setControlsColor(PulseAnimator.DefaultControlsColor);
         }
 
         private setDefaultValues() {
@@ -3043,69 +3138,68 @@ module powerbi.visuals.samples {
                     this.toEnd();
                 });
 
-            this.animationProgress
-                .attr("fill", this.color)
-                .attr('transform', SVGUtil.translate(150, 17));
+            this.animationCounter
+                .attr('fill', this.color)
+                .attr('transform',
+                    SVGUtil.translate(this.chart.data.settings.animationCounter.position === AnimationCounterPosition.TopLeft ? 140 : $(this.svg.node()).width(), 3));
+            this.animationCounterText
+                .style('text-anchor', this.chart.data.settings.animationCounter.position === AnimationCounterPosition.TopLeft ? "start" : "end" );
+
+            this.animationCounterText.style(PulseChart.ConvertTextPropertiesToStyle(
+                PulseChart.GetAnimationCounterTextProperties(null, this.chart.data.settings.animationCounter.fontSize)));
+            this.animationCounterText.style('fill', this.chart.data.settings.animationCounter.fontColor);
         }
 
-        private static showControl(element: D3.Selection): void {
+        private static setControlVisiblity(element: D3.Selection, isVisible:  boolean, isDisabled: boolean = false):  void {
             element
                 .transition()
                 .duration(PulseAnimator.ControlsDuration)
-                .attr('opacity', PulseAnimator.DefaultOpacity)
-                .attr('display', 'inline');
+                .attr('opacity', isVisible ? PulseAnimator.DefaultOpacity : PulseAnimator.DimmedOpacity);
+
+            if(isVisible)
+                element.attr('display', "inline");
+            else if(isDisabled)
+                element.attr('display', "none");
         }
 
-        private static hideControl(element: D3.Selection, isDisabled: boolean = false): void {
-            element
-                .transition()
-                .duration(PulseAnimator.ControlsDuration)
-                .attr('opacity', PulseAnimator.DimmedOpacity);
-
-            if (isDisabled) {
-                element
-                    .attr('display', 'none');
-            }
-        }
 
         private disableControls(): void {
-            PulseAnimator.showControl(this.animationReset);
+            PulseAnimator.setControlVisiblity(this.animationReset, true);
 
             switch (this.animatorState) {
                 case PulseAnimatorStates.Play:
-                    PulseAnimator.hideControl(this.animationPlay);
+                    PulseAnimator.setControlVisiblity(this.animationPlay, false);
 
-                    PulseAnimator.showControl(this.animationPause);
-                    PulseAnimator.showControl(this.animationToEnd);
-                    PulseAnimator.showControl(this.animationProgress);
+                    PulseAnimator.setControlVisiblity(this.animationPause, true);
+                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
+                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
                     break;
                 case PulseAnimatorStates.Paused:
-                    PulseAnimator.showControl(this.animationPlay);
-                    PulseAnimator.showControl(this.animationPause);
-                    PulseAnimator.showControl(this.animationToEnd);
-                    PulseAnimator.showControl(this.animationProgress);
+                    PulseAnimator.setControlVisiblity(this.animationPlay, true);
+                    PulseAnimator.setControlVisiblity(this.animationPause, true);
+                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
+                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
                     break;
                 case PulseAnimatorStates.Stopped:
-                    PulseAnimator.showControl(this.animationPlay);
-                    PulseAnimator.showControl(this.animationToEnd);
-                    PulseAnimator.showControl(this.animationProgress);
+                    PulseAnimator.setControlVisiblity(this.animationPlay, true);
+                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
+                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
 
-                    PulseAnimator.hideControl(this.animationPause);
+                    PulseAnimator.setControlVisiblity(this.animationPause, false);
                     break;
                 case PulseAnimatorStates.Ready:
-                    PulseAnimator.showControl(this.animationPlay);
+                    PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
-                    PulseAnimator.hideControl(this.animationPause);
-                    PulseAnimator.hideControl(this.animationToEnd);
-                    PulseAnimator.hideControl(this.animationProgress, true);
-
+                    PulseAnimator.setControlVisiblity(this.animationPause, false);
+                    PulseAnimator.setControlVisiblity(this.animationToEnd, false);
+                    PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
                     break;
                 default:
-                    PulseAnimator.showControl(this.animationPlay);
+                    PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
-                    PulseAnimator.hideControl(this.animationPause);
-                    PulseAnimator.hideControl(this.animationToEnd);
-                    PulseAnimator.hideControl(this.animationProgress, true);
+                    PulseAnimator.setControlVisiblity(this.animationPause, false);
+                    PulseAnimator.setControlVisiblity(this.animationToEnd, false);
+                    PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
                     break;
              }
         }
@@ -3135,7 +3229,7 @@ module powerbi.visuals.samples {
 
         private drawProgress(): void {
             var progressText = `${this.progressCurrent}  -  ${this.progressMax}`;
-            this.animationProgress
+            this.animationCounter
                     .select('text')
                     .text(progressText);
         }
