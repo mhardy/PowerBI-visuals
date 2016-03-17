@@ -1161,12 +1161,12 @@ module powerbi.visuals.samples {
                 .classed('pulseChart', true);
 
             this.gaps = svg.append('g').classed(PulseChart.Gaps.class, true);
-            this.chart = svg.append('g').attr('class', PulseChart.Chart.class);
             this.xAxis = svg.append('g').attr('class', 'x axis');
             this.yAxis = svg.append('g').attr('class', 'y axis');
 
-            this.dots = svg.append('g').attr('class', 'dots');
+            this.chart = svg.append('g').attr('class', PulseChart.Chart.class);
 
+            this.dots = svg.append('g').attr('class', 'dots');
             this.animationDot = this.dots.append('circle').classed(PulseChart.AnimationDot.class, true).attr('display', 'none');
 
             this.animationHandler = new PulseAnimator(this, svg);
@@ -1730,10 +1730,7 @@ module powerbi.visuals.samples {
                 .classed(PulseChart.TooltipContainer.class, true);
 
             if (this.animationHandler.isAnimated()) {
-                this.animationDot
-                    .attr('display', 'inline')
-                    .attr("r", this.data.settings.dots.size)
-                    .style("fill", this.data.settings.dots.color);
+                this.showAnimationDot();
 
                 if (sm.hasSelection()) {
                     this.drawTooltips(data, sm.getSelectionIds());
@@ -1856,7 +1853,7 @@ module powerbi.visuals.samples {
             var start: number = this.animationHandler.getCurrentIndex();
             var flooredStart: number = Math.floor(start);
 
-            this.clearSelection();
+            //this.clearSelection();
             this.showAnimationDot();
 
             selection
@@ -1898,7 +1895,11 @@ module powerbi.visuals.samples {
             }
         }
 
-        private showAnimationDot() {
+        private showAnimationDot(): void {
+
+            if (!this.animationHandler.isPlaying()) {
+                return;
+            }
             var size: number = PulseChart.DefaultSettings.dots.size;
 
            if (this.data &&
@@ -1910,6 +1911,7 @@ module powerbi.visuals.samples {
 
             this.animationDot
                 .attr('display', 'inline')
+                .attr("fill", this.data.settings.dots.color)
                 .attr("r", size);
         }
 
@@ -3294,6 +3296,7 @@ module powerbi.visuals.samples {
             this.chart.clearChart();
 
             this.setDefaultValues();
+            this.animatorState = PulseAnimatorStates.Stopped;
 
             this.disableControls();
         }
