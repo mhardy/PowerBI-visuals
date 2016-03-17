@@ -101,6 +101,7 @@ module powerbi.visuals.samples {
         size: number;
         minSize: number;
         maxSize: number;
+        transparency: number;
     }
 
     export function createEnumTypeFromEnum(type: any): IEnumType {
@@ -433,6 +434,10 @@ module powerbi.visuals.samples {
                             displayName: "Default Size",
                             type: { numeric: true }
                         },
+                        transparency: {
+                            displayName: 'Transparency',
+                            type: { numeric: true }
+                        },
                     }
                 },
                 xAxis: {
@@ -605,6 +610,7 @@ module powerbi.visuals.samples {
                 size: 5,
                 minSize: 5,
                 maxSize: 20,
+                transparency: 80,
             },
             gaps: {
                 show: false,
@@ -1969,6 +1975,7 @@ module powerbi.visuals.samples {
                 sm: SelectionManager = this.selectionManager,
                 dotColor: string = this.data.settings.dots.color,
                 dotSize: number = this.data.settings.dots.size,
+                transparency: number = this.data.settings.dots.transparency,
                 isAnimated: boolean = this.animationHandler.isAnimated(),
                 currentSeries: number = this.animationHandler.getCurrentSeries(),
                 currentIndex: number = this.animationHandler.getCurrentIndex();
@@ -2000,6 +2007,7 @@ module powerbi.visuals.samples {
                 .attr("cx", (d: PulseChartDataPoint) => xScale(d.categoryValue))
                 .attr("cy", (d: PulseChartDataPoint) => yScales[d.groupIndex](d.y))
                 .attr("r", (d: PulseChartDataPoint) => d.eventSize || dotSize)
+                .attr("fill-opacity", transparency / 100)
                 .style("fill", dotColor)
                 .style("cursor", "pointer")
                 .on("mouseover", function(d) {
@@ -2490,11 +2498,17 @@ module powerbi.visuals.samples {
                 size = maxSize;
             }
 
+            var transparency: number = Math.max(0, Math.min(100, DataViewObjects.getValue<number>(
+                objects,
+                properties["transparency"],
+                defaultSettings.transparency)));
+
             return {
                 color: color,
                 size: size,
                 minSize: minSize,
                 maxSize: maxSize,
+                transparency: transparency,
             };
         }
 
@@ -2754,6 +2768,7 @@ module powerbi.visuals.samples {
                     size: settings.size,
                     minSize: settings.minSize,
                     maxSize: settings.maxSize,
+                    transparency: settings.transparency,
                 }
             };
 
@@ -2890,6 +2905,8 @@ module powerbi.visuals.samples {
         private static DimmedOpacity = 0.25;
         private static DefaultOpacity = 1;
         private static DefaultControlsColor = "#777";
+
+        private static isDebug = false;
 
         constructor(chart: PulseChart, svg: D3.Selection) {
             this.chart = chart;
@@ -3142,6 +3159,8 @@ module powerbi.visuals.samples {
         }
 
         public play(): void {
+            PulseAnimator.isDebug && console.log('play');
+
             if (this.animatorState === PulseAnimatorStates.Play) {
                 return;
             }
@@ -3157,6 +3176,8 @@ module powerbi.visuals.samples {
         }
 
         public pause(): void {
+            PulseAnimator.isDebug && console.log('pause');
+
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.animatorState = PulseAnimatorStates.Paused;
                 this.chart.pauseAnimation();
@@ -3165,7 +3186,8 @@ module powerbi.visuals.samples {
         }
 
         private reset(): void {
-            console.log('reset');
+            PulseAnimator.isDebug && console.log('reset');
+
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3176,6 +3198,8 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
+            PulseAnimator.isDebug && console.log('toEnd');
+
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3188,7 +3212,7 @@ module powerbi.visuals.samples {
         }
 
         public stop(): void {
-            console.log('stop');
+            PulseAnimator.isDebug && console.log('stop');
 
             if (!this.isAnimated()) {
                 return;
