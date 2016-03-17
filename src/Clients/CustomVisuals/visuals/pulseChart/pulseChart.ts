@@ -75,6 +75,8 @@ module powerbi.visuals.samples {
         groupIndex: number;
         popupInfo?: PulseChartTooltipData;
         eventSize: number;
+        runnerCounterValue: any;
+        runnerCounterFormatString: any;
     }
 
     export interface PulseChartLegend extends DataViewObject {
@@ -128,7 +130,7 @@ module powerbi.visuals.samples {
         Bottom = <any>'Bottom',
     }
 
-    export enum AnimationCounterPosition {
+    export enum RunnerCounterPosition {
         TopLeft = <any>'Top Left',
         TopRight = <any>'Top Right'
     }
@@ -153,9 +155,9 @@ module powerbi.visuals.samples {
         color: string;
     }
 
-    export interface PulseChartAnimationCounterSettings {
+    export interface PulseChartRunnerCounterSettings {
         show: boolean;
-        position: AnimationCounterPosition;
+        position: RunnerCounterPosition;
         fontSize: number;
         fontColor: string;
     }
@@ -187,7 +189,7 @@ module powerbi.visuals.samples {
         gaps: PulseChartGapsSettings;
         xAxis: PulseChartXAxisSettings;
         yAxis: PulseChartYAxisSettings;
-        animationCounter: PulseChartAnimationCounterSettings;
+        runnerCounter: PulseChartRunnerCounterSettings;
         playback: PulseChartPlaybackSettings;
         format?: string;
     }
@@ -251,6 +253,7 @@ module powerbi.visuals.samples {
             EventTitle: "Event Title",
             EventDescription: "Event Description",
             EventSize: "Event Size",
+            RunnerCounter: "Runner Counter",
         };
 
         public static capabilities: VisualCapabilities = {
@@ -285,6 +288,11 @@ module powerbi.visuals.samples {
                     name: PulseChart.RoleNames.EventSize,
                     kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
                 },
+                {
+                    displayName: PulseChart.RoleNames.RunnerCounter,
+                    name: PulseChart.RoleNames.RunnerCounter,
+                    kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
+                },
             ],
             dataViewMappings: [{
                 conditions: [
@@ -295,6 +303,7 @@ module powerbi.visuals.samples {
                         'EventTitle': { max: 0 },
                         'EventDescription': { max: 0 },
                         'EventSize': { max: 0 },
+                        'RunnerCounter': { min: 0, max: 1 },
                     },
                     {
                         'Timestamp': { min: 1, max: 1 },
@@ -303,6 +312,7 @@ module powerbi.visuals.samples {
                         'EventTitle': { max: 0 },
                         'EventDescription': { max: 0 },
                         'EventSize': { max: 0 },
+                        'RunnerCounter': { min: 0, max: 1 },
                     },
                     {
                         'Timestamp': { min: 1, max: 1 },
@@ -311,6 +321,7 @@ module powerbi.visuals.samples {
                         'EventTitle': { max: 1 },
                         'EventDescription': { max: 1 },
                         'EventSize': { max: 1 },
+                        'RunnerCounter': { min: 0, max: 1 },
                     }
                 ],
                 categorical: {
@@ -325,7 +336,8 @@ module powerbi.visuals.samples {
                                 { bind: { to: PulseChart.RoleNames.Value } },
                                 { bind: { to: PulseChart.RoleNames.EventTitle } },
                                 { bind: { to: PulseChart.RoleNames.EventDescription } },
-                                { bind: { to: PulseChart.RoleNames.EventSize } }
+                                { bind: { to: PulseChart.RoleNames.EventSize } },
+                                { bind: { to: PulseChart.RoleNames.RunnerCounter } },
                             ],
                             dataReductionAlgorithm: { top: {} }
                         },
@@ -524,8 +536,8 @@ module powerbi.visuals.samples {
                         },
                     }
                 },
-                animationCounter: {
-                    displayName: 'Animation Counter',
+                runnerCounter: {
+                    displayName: 'Runner Counter',
                     properties: {
                         show: {
                             displayName: data.createDisplayNameGetter("Visual_Show"),
@@ -533,7 +545,7 @@ module powerbi.visuals.samples {
                         },
                         position: {
                             displayName: "Position",
-                            type: { enumeration: createEnumTypeFromEnum(AnimationCounterPosition) }
+                            type: { enumeration: createEnumTypeFromEnum(RunnerCounterPosition) }
                         },
                         fontSize: {
                             displayName: "Text Size",
@@ -604,7 +616,7 @@ module powerbi.visuals.samples {
             }
         }
 
-        public static GetAnimationCounterTextProperties(text?: string, fontSizeValue = 12): TextProperties {
+        public static GetRunnerCounterTextProperties(text?: string, fontSizeValue = 12): TextProperties {
             return {
                 fontFamily: "sans-serif",
                 fontSize:  fontSizeValue + "px",
@@ -683,9 +695,9 @@ module powerbi.visuals.samples {
                 autoplayPauseDuration: 0,
                 color: "#777",
             },
-            animationCounter: {
+            runnerCounter: {
                 show: true,
-                position: AnimationCounterPosition.TopRight,
+                position: RunnerCounterPosition.TopRight,
                 fontSize: 13,
                 fontColor: "#777777"
             }
@@ -695,6 +707,9 @@ module powerbi.visuals.samples {
         private static PopupTextPadding: number = 3;
 
         public data: PulseChartData;
+        public margin: IMargin;
+        public viewport: IViewport;
+        public size: IViewport;
 
         private svg: D3.Selection;
         private chart: D3.Selection;
@@ -710,10 +725,6 @@ module powerbi.visuals.samples {
         private animationHandler: PulseAnimator;
         private behavior: IInteractiveBehavior;
         private colors: IDataColorPalette;
-
-        private viewport: IViewport;
-        private margin: IMargin;
-        private size: IViewport;
 
         private static DefaultMargin: IMargin = {
             top: 120,
@@ -831,6 +842,9 @@ module powerbi.visuals.samples {
             var eventTitleMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventTitle);
             var eventDescriptionMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventDescription);
             var eventSizeMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventSize);
+            var runnerCounterMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.RunnerCounter);
+
+            var formatStringProp = PulseChart.Properties["general"]["formatString"];
 
             if (categoryMeasureIndex < 0) {
                 // console.error("categoryMeasureIndex not found");
@@ -870,6 +884,13 @@ module powerbi.visuals.samples {
                 eventSizeValues = dataView.categorical.categories[eventSizeMeasureIndex].values;
             }
 
+            var runnerCounterValues: any[] = [];
+            var runnerCounterFormatString: string;
+            if(runnerCounterMeasureIndex >= 0) {
+                runnerCounterValues = dataView.categorical.categories[runnerCounterMeasureIndex].values;
+                runnerCounterFormatString = visuals.valueFormatter.getFormatString(dataView.categorical.categories[runnerCounterMeasureIndex].source, formatStringProp);
+            }
+
             var minSize: number = PulseChart.DefaultSettings.dots.minSize;
             var maxSize: number = PulseChart.DefaultSettings.dots.maxSize;
             if (settings.dots) {
@@ -887,7 +908,6 @@ module powerbi.visuals.samples {
             isScalar = CartesianHelper.isScalar(isScalar, xAxisCardProperties);
             var categorical = ColumnUtil.applyUserMinMax(isScalar, dataView.categorical, xAxisCardProperties);
 
-            var formatStringProp = PulseChart.Properties["general"]["formatString"];
             var categoryType: ValueType = AxisHelper.getCategoryValueType(category.source, isScalar);
             var isDateTime = AxisHelper.isDateTime(categoryType);
             //var categoryValues: any[] = category.values;
@@ -952,6 +972,7 @@ module powerbi.visuals.samples {
             for (var categoryIndex = 0, seriesCategoryIndex = 0, len = column.values.length; categoryIndex < len; categoryIndex++ , seriesCategoryIndex++) {
                 var categoryValue = categoryValues[categoryIndex];
                 var value = AxisHelper.normalizeNonFiniteNumber(column.values[categoryIndex]);
+                var runnerCounterValue = runnerCounterValues[categoryIndex];
 
                 var identity = SelectionIdBuilder.builder()
                     .withCategory(column, categoryIndex)
@@ -1040,6 +1061,8 @@ module powerbi.visuals.samples {
                     pointColor: color,
                     groupIndex: PulseChart.getGroupIndex(categoryIndex, grouped),
                     eventSize: eventSizeScale(eventSizeValues[categoryIndex]),
+                    runnerCounterValue: runnerCounterValue,
+                    runnerCounterFormatString: runnerCounterFormatString,
                 };
 
                 dataPoints.push(dataPoint);
@@ -1524,9 +1547,6 @@ module powerbi.visuals.samples {
 
             this.animationHandler.setSize(this.getSeriesSize());
 
-            var progressMaxValue = this.getCategoryValue(this.getLastData());
-            this.animationHandler.setMaxProgress(progressMaxValue);
-
             if (this.data &&
                 this.data.settings &&
                 this.data.settings.playback &&
@@ -1896,15 +1916,6 @@ module powerbi.visuals.samples {
             this.animationDot.attr('display', 'none');
         }
 
-        private getCategoryValue(value: PulseChartDataPoint): any {
-             if (this.data.isScalar) {
-                 return value.categoryValue;
-             }
-             //value.labelFormatString
-             var formatterTime = valueFormatter.create({ format: /*"hh:mm:ss"*/value.labelFormatString });
-             return formatterTime.format(value.categoryValue);
-        }
-
         private getInterpolation(data: PulseChartDataPoint[], start: number) {
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>this.data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>this.data.yScales;
@@ -1947,8 +1958,15 @@ module powerbi.visuals.samples {
                 .domain([0, 1])
                 .range([y0, y1]);
 
-            var progressValue = this.getCategoryValue(data[start]);
-            this.animationHandler.setProgress(progressValue);
+            var runnerCounterValue: string = data[start].runnerCounterValue;
+            if(runnerCounterValue == null) {
+                runnerCounterValue = "";
+            }
+            if(data[start].runnerCounterFormatString) {
+                var runnerCounterformatter = visuals.valueFormatter.create({ format: data[start].runnerCounterFormatString });
+                runnerCounterValue = runnerCounterformatter.format(runnerCounterValue);
+            }
+            this.animationHandler.setRunnerCounterValue(runnerCounterValue);
 
             return (t: number) => {
 
@@ -2446,7 +2464,7 @@ module powerbi.visuals.samples {
             settings.series = this.getSeriesSettings(objects);
             settings.gaps = this.getGapsSettings(objects);
             settings.playback = this.getPlaybackSettings(objects);
-            settings.animationCounter = this.getAnimationCounterSettings(objects);
+            settings.runnerCounter = this.getRunnerCounterSettings(objects);
 
             return settings;
         }
@@ -2723,26 +2741,26 @@ module powerbi.visuals.samples {
             return playbackSettings;
         }
 
-        private getAnimationCounterSettings(objects: DataViewObjects): PulseChartAnimationCounterSettings {
+        private getRunnerCounterSettings(objects: DataViewObjects): PulseChartRunnerCounterSettings {
             var show: boolean =  DataViewObjects.getValue<boolean>(
                 objects,
-                PulseChart.Properties["animationCounter"]["show"],
-                PulseChart.DefaultSettings.animationCounter.show);
+                PulseChart.Properties["runnerCounter"]["show"],
+                PulseChart.DefaultSettings.runnerCounter.show);
 
-            var position = DataViewObjects.getValue<AnimationCounterPosition>(
+            var position = DataViewObjects.getValue<RunnerCounterPosition>(
                 objects,
-                PulseChart.Properties["animationCounter"]["position"],
-                PulseChart.DefaultSettings.animationCounter.position);
+                PulseChart.Properties["runnerCounter"]["position"],
+                PulseChart.DefaultSettings.runnerCounter.position);
 
             var fontSize = parseInt(DataViewObjects.getValue<any>(
                 objects,
-                PulseChart.Properties["animationCounter"]["fontSize"],
-                PulseChart.DefaultSettings.animationCounter.fontSize), 10);
+                PulseChart.Properties["runnerCounter"]["fontSize"],
+                PulseChart.DefaultSettings.runnerCounter.fontSize), 10);
 
             var fontColor = new ColorHelper(
                 this.colors,
-                PulseChart.Properties["animationCounter"]["fontColor"],
-                PulseChart.DefaultSettings.animationCounter.fontColor)
+                PulseChart.Properties["runnerCounter"]["fontColor"],
+                PulseChart.DefaultSettings.runnerCounter.fontColor)
                 .getColorForMeasure(objects, "");
 
             return {
@@ -2807,8 +2825,8 @@ module powerbi.visuals.samples {
                     this.readPlaybackInstance(enumeration);
                     break;
                 }
-                case "animationCounter": {
-                    this.readAnimationCounterInstance(enumeration);
+                case "runnerCounter": {
+                    this.readRunnerCounterInstance(enumeration);
                     break;
                 }
             }
@@ -2953,18 +2971,18 @@ module powerbi.visuals.samples {
             });
         }
 
-        private readAnimationCounterInstance(enumeration: ObjectEnumerationBuilder): void {
-            var animationCounterSettings: PulseChartAnimationCounterSettings =
-                this.data.settings.animationCounter || PulseChart.DefaultSettings.animationCounter;
+        private readRunnerCounterInstance(enumeration: ObjectEnumerationBuilder): void {
+            var runnerCounterSettings: PulseChartRunnerCounterSettings =
+                this.data.settings.runnerCounter || PulseChart.DefaultSettings.runnerCounter;
 
             enumeration.pushInstance({
-                objectName: "animationCounter",
+                objectName: "runnerCounter",
                 selector: null,
                 properties: {
-                    show: animationCounterSettings.show,
-                    position: animationCounterSettings.position,
-                    fontSize: animationCounterSettings.fontSize,
-                    fontColor: animationCounterSettings.fontColor
+                    show: runnerCounterSettings.show,
+                    position: runnerCounterSettings.position,
+                    fontSize: runnerCounterSettings.fontSize,
+                    fontColor: runnerCounterSettings.fontColor
                 }
             });
         }
@@ -2978,6 +2996,7 @@ module powerbi.visuals.samples {
     }
 
     export class PulseAnimator {
+        private static isDebug = false;
 
         private chart: PulseChart;
         private svg: D3.Selection;
@@ -2985,14 +3004,14 @@ module powerbi.visuals.samples {
         private animationPause: D3.Selection;
         private animationReset: D3.Selection;
         private animationToEnd: D3.Selection;
-        private animationCounter: D3.Selection;
-        private animationCounterText: D3.Selection;
+        private runnerCounter: D3.Selection;
+        private runnerCounterText: D3.Selection;
 
         private static AnimationPlay: ClassAndSelector = createClassAndSelector('animationPlay');
         private static AnimationPause: ClassAndSelector = createClassAndSelector('animationPause');
         private static animationReset: ClassAndSelector = createClassAndSelector('animationReset');
         private static AnimationToEnd: ClassAndSelector = createClassAndSelector('animationToEnd');
-        private static AnimationCounter: ClassAndSelector = createClassAndSelector('animationCounter');
+        private static RunnerCounter: ClassAndSelector = createClassAndSelector('runnerCounter');
         private animatorState: PulseAnimatorStates;
 
         private animationIndex;
@@ -3004,8 +3023,15 @@ module powerbi.visuals.samples {
 
         private container: D3.Selection;
 
-        private progressCurrent: any;
-        private progressMax: any;
+        private runnerCounterValue: any;
+        private runnerCounterTopLeftPosition: number = 120;
+        private get runnerCounterPosition(): RunnerCounterPosition {
+            return this.chart.data.settings.runnerCounter.position;
+        }
+        private get maxTextWidthOfRunnerCounterValue(): number {
+            var top = this.runnerCounterPosition === RunnerCounterPosition.TopLeft || this.runnerCounterPosition === RunnerCounterPosition.TopRight;
+            return this.chart.viewport.width - (top ? this.runnerCounterTopLeftPosition : 0);
+        }
 
         private color: string;
 
@@ -3013,8 +3039,6 @@ module powerbi.visuals.samples {
         private static DimmedOpacity = 0.25;
         private static DefaultOpacity = 1;
         private static DefaultControlsColor = "#777";
-
-        private static isDebug = false;
 
         constructor(chart: PulseChart, svg: D3.Selection) {
             this.chart = chart;
@@ -3073,9 +3097,9 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 16v-8l5 4-5 4zm5 0v-8l5 4-5 4zm7-8h-2v8h2v-8z");
 
-            this.animationCounter = container.append('g').classed(PulseAnimator.AnimationCounter.class, true);
-            this.animationCounterText = this.animationCounter.append('text');
-            this.animationCounterText.style('alignment-baseline', "hanging");
+            this.runnerCounter = container.append('g').classed(PulseAnimator.RunnerCounter.class, true);
+            this.runnerCounterText = this.runnerCounter.append('text');
+            this.runnerCounterText.style('alignment-baseline', "hanging");
 			this.setControlsColor(PulseAnimator.DefaultControlsColor);
         }
 
@@ -3085,8 +3109,7 @@ module powerbi.visuals.samples {
 
             this.animatorState = PulseAnimatorStates.Ready;
 
-            this.progressCurrent = 0;
-            this.progressMax = 0;
+            this.runnerCounterValue = null;
         }
 
         public render(isAutoPlay: boolean): void {
@@ -3111,50 +3134,34 @@ module powerbi.visuals.samples {
             this.animationPlay
                 .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(0, 0))
-                .on("click", () => {
-
-                    if (this.isPlaying()) {
-                        return false;
-                    }
-                    this.play();
-                });
+                .on("click", () => !this.isPlaying() && void this.play());
 
             this.animationPause
                 .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(30, 0))
-                .on("click", () => {
-                    this.stop();
-                });
+                .on("click", () => this.stop());
 
             this.animationReset
                 .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(60, 0))
-                .on("click", () => {
-
-                    this.reset();
-                });
+                .on("click", () => this.reset());
 
             this.animationToEnd
                 .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(90, 0))
-                .on("click", () => {
+                .on("click", () => this.isAnimated() && void this.toEnd());
 
-                    if (!this.isAnimated()) {
-                        return false;
-                    }
-                    this.toEnd();
-                });
-
-            this.animationCounter
+            this.runnerCounter
                 .attr('fill', this.color)
                 .attr('transform',
-                    SVGUtil.translate(this.chart.data.settings.animationCounter.position === AnimationCounterPosition.TopLeft ? 140 : $(this.svg.node()).width(), 3));
-            this.animationCounterText
-                .style('text-anchor', this.chart.data.settings.animationCounter.position === AnimationCounterPosition.TopLeft ? "start" : "end" );
+                    SVGUtil.translate(this.runnerCounterPosition === RunnerCounterPosition.TopLeft ? this.runnerCounterTopLeftPosition : this.chart.viewport.width, 3));
+            this.runnerCounterText
+                .style('text-anchor', this.runnerCounterPosition === RunnerCounterPosition.TopLeft ? "start" : "end" );
 
-            this.animationCounterText.style(PulseChart.ConvertTextPropertiesToStyle(
-                PulseChart.GetAnimationCounterTextProperties(null, this.chart.data.settings.animationCounter.fontSize)));
-            this.animationCounterText.style('fill', this.chart.data.settings.animationCounter.fontColor);
+            this.runnerCounterText.style(PulseChart.ConvertTextPropertiesToStyle(
+                PulseChart.GetRunnerCounterTextProperties(null, this.chart.data.settings.runnerCounter.fontSize)));
+            this.runnerCounterText.style('fill', this.chart.data.settings.runnerCounter.fontColor);
+            this.drawCounterValue();
         }
 
         private static setControlVisiblity(element: D3.Selection, isVisible:  boolean, isDisabled: boolean = false):  void {
@@ -3180,16 +3187,16 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPlay, false);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Stopped:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
-                    PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
                     break;
@@ -3197,13 +3204,13 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
-                    PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, false, true);
                     break;
                 default:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
-                    PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, false, true);
                     break;
              }
         }
@@ -3220,22 +3227,17 @@ module powerbi.visuals.samples {
             this.container.attr('display', 'block');
         }
 
-        public setMaxProgress(value: any): void {
-            this.progressMax = value;
-        }
-
-        public setProgress(value: any): void {
-            this.progressCurrent = value;
+        public setRunnerCounterValue(value: any): void {
+            this.runnerCounterValue = value;
             //console.log("Progress: ", value);
 
-            this.drawProgress();
+            this.drawCounterValue();
         }
 
-        private drawProgress(): void {
-            var progressText = `${this.progressCurrent}  -  ${this.progressMax}`;
-            this.animationCounter
-                    .select('text')
-                    .text(progressText);
+        private drawCounterValue(): void {
+            var progressText = `${this.runnerCounterValue}`;
+            this.runnerCounterText.text(progressText);
+            TextMeasurementService.svgEllipsis(<any>this.runnerCounterText.node(), this.maxTextWidthOfRunnerCounterValue);
         }
 
         public isAnimated(): boolean {
