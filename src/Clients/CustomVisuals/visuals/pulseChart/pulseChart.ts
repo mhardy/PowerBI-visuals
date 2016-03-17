@@ -1951,6 +1951,11 @@ module powerbi.visuals.samples {
             this.animationHandler.setProgress(progressValue);
 
             return (t: number) => {
+
+                if (!this.animationHandler.isPlaying()) {
+                    return lineFunction(interpolatedLine);
+                }
+
                 var index: number = interpolateIndex(t);
                 var flooredX = Math.floor(index);
 
@@ -3160,8 +3165,7 @@ module powerbi.visuals.samples {
 
             if (isVisible) {
                 element.attr('display', "inline");
-            }
-            else if (isDisabled) {
+            } else if (isDisabled) {
                 element.attr('display', "none");
             }
         }
