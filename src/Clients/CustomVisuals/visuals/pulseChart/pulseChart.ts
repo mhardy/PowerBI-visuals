@@ -155,7 +155,7 @@ module powerbi.visuals.samples {
 
     export interface PulseChartAnimationCounterSettings {
         show: boolean;
-        position: AnimationCounterPosition; 
+        position: AnimationCounterPosition;
         fontSize: number;
         fontColor: string;
     }
@@ -605,7 +605,7 @@ module powerbi.visuals.samples {
         }
 
         public static GetAnimationCounterTextProperties(text?: string, fontSizeValue = 12): TextProperties {
-            return { 
+            return {
                 fontFamily: "sans-serif",
                 fontSize:  fontSizeValue + "px",
                 fontSizeValue: fontSizeValue
@@ -1016,7 +1016,7 @@ module powerbi.visuals.samples {
                         time: time,
                         title: eventTitleValues[categoryIndex],
                         description: eventDescriptionValues[categoryIndex],
-                        size: eventSizeValues[categoryIndex],
+                        size: eventSizeValues[categoryIndex] || 0,
                     };
                 }
 
@@ -1702,11 +1702,11 @@ module powerbi.visuals.samples {
 
             lineNode
                 .append('g')
-                .classed(PulseChart.TooltipContainer.class, true);
+                .classed(PulseChart.DotsContainer.class, true);
 
             lineNode
                 .append('g')
-                .classed(PulseChart.DotsContainer.class, true);
+                .classed(PulseChart.TooltipContainer.class, true);
 
             if (this.animationHandler.isAnimated()) {
                 this.animationDot
@@ -2059,14 +2059,14 @@ module powerbi.visuals.samples {
                 .attr("fill-opacity", transparency / 100)
                 .style("fill", dotColor)
                 .style("cursor", "pointer")
-                .on("mouseover", function(d) {
+                /*.on("mouseover", function(d) {
                     d3.select(this)
                         .attr("r", (d.eventSize || dotSize) * 1.1);
                 })
                 .on("mouseout", function(d) {
                     d3.select(this)
                         .attr("r", d.eventSize || dotSize);
-                })
+                })*/
                 .on("click", (d: PulseChartDataPoint) => {
                     d3.event.stopPropagation();
                     sm.select(d.identity, d3.event.ctrlKey)
@@ -2298,7 +2298,9 @@ module powerbi.visuals.samples {
                     var path = [
                         {
                             "x": width/2 - d.popupInfo.offsetX,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex),
+                            "y": this.isHigherMiddle(d.y, d.groupIndex) ?
+                                yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) - d.eventSize :
+                                yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex) + d.eventSize,
                         },
                         {
                             "x": width/2 - d.popupInfo.offsetX,
@@ -3156,33 +3158,33 @@ module powerbi.visuals.samples {
                 .duration(PulseAnimator.ControlsDuration)
                 .attr('opacity', isVisible ? PulseAnimator.DefaultOpacity : PulseAnimator.DimmedOpacity);
 
-            if(isVisible)
+            if (isVisible) {
                 element.attr('display', "inline");
-            else if(isDisabled)
+            }
+            else if (isDisabled) {
                 element.attr('display', "none");
+            }
         }
 
 
         private disableControls(): void {
             PulseAnimator.setControlVisiblity(this.animationReset, true);
+            PulseAnimator.setControlVisiblity(this.animationToEnd, true);
 
             switch (this.animatorState) {
                 case PulseAnimatorStates.Play:
                     PulseAnimator.setControlVisiblity(this.animationPlay, false);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
                     PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
                     break;
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
                     PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
                     break;
                 case PulseAnimatorStates.Stopped:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
-                    PulseAnimator.setControlVisiblity(this.animationToEnd, true);
                     PulseAnimator.setControlVisiblity(this.animationCounter, this.chart.data.settings.animationCounter.show, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
@@ -3191,14 +3193,12 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
-                    PulseAnimator.setControlVisiblity(this.animationToEnd, false);
                     PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
                     break;
                 default:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
-                    PulseAnimator.setControlVisiblity(this.animationToEnd, false);
                     PulseAnimator.setControlVisiblity(this.animationCounter, false, true);
                     break;
              }
