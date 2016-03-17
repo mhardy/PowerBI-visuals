@@ -1636,9 +1636,10 @@ module powerbi.visuals.samples {
                 .insert("rect", "text")
                 .classed("axisBox", true);
 
+            var tickRectY = this.data.settings.xAxis.position === XAxisPosition.Center ? -0.7 : 0;
             ticksUpdateSelection.attr({
                     x: -(this.data.widthOfXAxisLabel / 2),
-                    y: "-0.7em",
+                    y: tickRectY + "em",
                     width: this.data.widthOfXAxisLabel,
                     height: "1.3em"
                 });
@@ -1660,7 +1661,7 @@ module powerbi.visuals.samples {
                 .selectAll("text")
                 .style('stroke', fontColor)
                 .attr({
-                    dy: "-0.5em"
+                    dy: (tickRectY + 0.2) + "em"
                 });
 
             this.xAxis.selectAll(".domain")
