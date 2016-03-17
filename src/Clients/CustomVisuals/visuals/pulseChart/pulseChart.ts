@@ -1663,7 +1663,7 @@ module powerbi.visuals.samples {
                     this.drawTooltips(data, sm.getSelectionIds());
                 }
             } else {
-                this.hideDot();
+                this.hideAnimationDot();
                 this.drawTooltips(data);
             }
 
@@ -1781,6 +1781,7 @@ module powerbi.visuals.samples {
             var flooredStart: number = Math.floor(start);
 
             this.clearSelection();
+            this.showAnimationDot();
 
             selection
                 .transition()
@@ -1797,6 +1798,8 @@ module powerbi.visuals.samples {
             if (!this.animationSelection) {
                 return;
             }
+
+            this.hideAnimationDot();
 
             this.animationSelection
                 .transition()
@@ -1819,11 +1822,22 @@ module powerbi.visuals.samples {
             }
         }
 
-        private showDot() {
-            this.animationDot.attr('display', 'inline');
+        private showAnimationDot() {
+            var size: number = PulseChart.DefaultSettings.dots.size;
+
+           if (this.data &&
+                this.data.settings &&
+                this.data.settings.dots &&
+                this.data.settings.dots.size) {
+                    size = this.data.settings.dots.size;
+                }
+
+            this.animationDot
+                .attr('display', 'inline')
+                .attr("r", size);
         }
 
-        private hideDot() {
+        private hideAnimationDot() {
             this.animationDot.attr('display', 'none');
         }
 
@@ -1836,57 +1850,6 @@ module powerbi.visuals.samples {
              return formatterTime.format(value.categoryValue);
         }
 
-        /*
-        private getInterpolationLine(data: PulseChartDataPoint[], start: number) {
-            var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>this.data.xScale,
-                yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>this.data.yScales;
-            var stop: number = start + 1;
-
-            var lineFunction: D3.Svg.Line = d3.svg.line()
-                .x(d => d.x)
-                .y(d => d.y)
-                .interpolate("linear");
-
-            var interpolatedLine = data.slice(0, start + 1).map((d: PulseChartDataPoint): PulseChartPointXY => {
-                    return {
-                        x: xScale(d.x),
-                        y: yScales[d.groupIndex](d.y)
-                    };
-            });
-
-            var x0: number = xScale(data[start].x);
-            var x1: number = xScale(data[stop].x);
-
-            var y0: number = yScales[data[start].groupIndex](data[start].y);
-            var y1: number = yScales[data[stop].groupIndex](data[stop].y);
-
-            var interpolateIndex: D3.Scale.LinearScale = d3.scale.linear()
-                .domain([0, 1])
-                .range([start, stop]);
-
-            var interpolateX: D3.Scale.LinearScale = d3.scale.linear()
-                .domain([0, 1])
-                .range([x0, x1]);
-
-            var interpolateY: D3.Scale.LinearScale = d3.scale.linear()
-                .domain([0, 1])
-                .range([y0, y1]);
-
-            var steps: number = 0;
-
-            return (t: number) => {
-                var index: number = interpolateIndex(t);
-                var flooredX = Math.floor(index);
-
-                var x: number = interpolateX(t);
-                var y: number = interpolateY(t);
-
-                interpolatedLine.push({ "x": x, "y": y });
-                return lineFunction(interpolatedLine);
-            };
-        }
-        */
-
         private getInterpolation(data: PulseChartDataPoint[], start: number) {
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>this.data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>this.data.yScales;
@@ -1897,7 +1860,7 @@ module powerbi.visuals.samples {
                 return;
             }
 
-            this.showDot();
+            this.showAnimationDot();
 
             var lineFunction: D3.Svg.Line = d3.svg.line()
                 .x(d => d.x)
@@ -1929,8 +1892,6 @@ module powerbi.visuals.samples {
                 .domain([0, 1])
                 .range([y0, y1]);
 
-            var steps: number = 0;
-
             var progressValue = this.getCategoryValue(data[start]);
             this.animationHandler.setProgress(progressValue);
 
@@ -1938,7 +1899,6 @@ module powerbi.visuals.samples {
                 var index: number = interpolateIndex(t);
                 var flooredX = Math.floor(index);
 
-                steps++;
                 this.animationHandler.setCurrentIndex(index);
 
                 if (t >= 1) {
@@ -1957,26 +1917,10 @@ module powerbi.visuals.samples {
             };
         }
 
-        private setDotSize(size: number): void {
-            var sizeDuration: number = 200;
-            if (size) {
-                this.animationDot
-                        .transition()
-                        .duration(sizeDuration)
-                        .attr("r", size);
-            }
-        }
-
         public clearSelection(): void {
             var sm: SelectionManager = this.selectionManager;
             sm.clear();
 
-            if (this.data &&
-                this.data.settings &&
-                this.data.settings.dots &&
-                this.data.settings.dots.size) {
-                    this.setDotSize(this.data.settings.dots.size);
-                }
             this.chart.selectAll(PulseChart.Tooltip.selector).remove();
         }
 
@@ -1992,7 +1936,6 @@ module powerbi.visuals.samples {
             }
 
             this.animationHandler.pause();
-            this.setDotSize(d.eventSize);
 
             sm.select(d.identity).then((selectionIds: SelectionId[]) => {
                 this.setSelection(selectionIds);
@@ -2147,7 +2090,7 @@ module powerbi.visuals.samples {
         }
 
         private setSelection(selectionIds?: SelectionId[]): void {
-            //console.log('selectionIds', selectionIds, 'this.data', this.data);
+            this.drawDots(this.data);
             this.drawTooltips(this.data, selectionIds);
         }
 
@@ -2722,7 +2665,7 @@ module powerbi.visuals.samples {
 
         public clearChart(): void {
            this.clearSelection();
-           this.hideDot();
+           this.hideAnimationDot();
            this.chart.selectAll(PulseChart.Line.selector).remove();
            this.chart.selectAll(PulseChart.Dot.selector).remove();
            this.chart.selectAll(PulseChart.Tooltip.selector).remove();
