@@ -1441,7 +1441,8 @@ module powerbi.visuals.samples {
                     .tickValues(values)
                     .tickFormat((value: Date) => {
                         return properties.formatter.format(value);
-                    });
+                    })
+                	.outerTickSize(0);
             });
         }
 
@@ -2048,6 +2049,7 @@ module powerbi.visuals.samples {
 
            var selection: D3.UpdateSelection = rootSelection.filter((d, index) => !isAnimated || index <= currentSeries)
                 .select(nodeParent.selector)
+				.attr("opacity", transparency / 100)
                 .selectAll(node.selector)
                 .data((d: PulseChartSeries, seriesIndex: number) => {
                     return _.filter(d.data, (value: PulseChartDataPoint, valueIndex: number): boolean => {
@@ -2067,7 +2069,6 @@ module powerbi.visuals.samples {
                 .attr("cx", (d: PulseChartDataPoint) => xScale(d.categoryValue))
                 .attr("cy", (d: PulseChartDataPoint) => yScales[d.groupIndex](d.y))
                 .attr("r", (d: PulseChartDataPoint) => d.eventSize || dotSize)
-                .attr("fill-opacity", transparency / 100)
                 .style("fill", dotColor)
                 .style("cursor", "pointer")
                 /*.on("mouseover", function(d) {
