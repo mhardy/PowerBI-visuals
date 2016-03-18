@@ -171,7 +171,6 @@ module powerbi.visuals.samples {
 
     export interface PulseChartXAxisSettings extends PulseChartAxisSettings {
         position: XAxisPosition;
-        step: number;
         dateFormat: PulseChartXAxisDateFormat;
     }
 
@@ -500,10 +499,6 @@ module powerbi.visuals.samples {
                             displayName: "Axis Color",
                             type: { fill: { solid: { color: true } } }
                         },
-                        step: {
-                            displayName: "Step",
-                            type: { numeric: true }
-                        },
                         dateFormat: {
                             displayName: "Date format",
                             type: { enumeration: createEnumTypeFromEnum(PulseChartXAxisDateFormat) }
@@ -703,7 +698,6 @@ module powerbi.visuals.samples {
             xAxis: {
                 color: "#777777",
                 fontColor: "#FFFFFF",
-                step: 30,
                 position: XAxisPosition.Center,
                 show: true,
                 dateFormat: PulseChartXAxisDateFormat.TimeOnly
@@ -732,6 +726,7 @@ module powerbi.visuals.samples {
 
         private static MaxWidthOfYAxis: number = 50;
         private static PopupTextPadding: number = 3;
+        private static xAxisTickSpace: number = 15;
 
         public data: PulseChartData;
         public margin: IMargin;
@@ -773,7 +768,10 @@ module powerbi.visuals.samples {
             timeHeight: 15,
         };
 
-        private static MinGapWidth = 60 * 1000;
+        private static MinGapWidth = <[number]>_.object(<any>[[
+            PulseChartXAxisDateFormat.DateOnly, 60 * 1000 * 24], [
+            PulseChartXAxisDateFormat.TimeOnly, 60 * 1000], 
+            ], undefined);
 
         private static MaxCountOfTicksOnYAxis: number = 10;
 
@@ -957,9 +955,9 @@ module powerbi.visuals.samples {
                     .createSelectionId();
 
                 var key = identity.getKey(),
-                    widthOfGap: number = gapWidths[categoryIndex],
-
-                    isGap: boolean = settings.gaps.show && widthOfGap > 0 && widthOfGap > (PulseChart.MinGapWidth + (100 - settings.gaps.visibleGapsPercentage) * (maxGapWidth - PulseChart.MinGapWidth) / 100);
+                    minGapWidth = PulseChart.MinGapWidth[settings.xAxis.dateFormat],
+                    gapWidth: number = gapWidths[categoryIndex],
+                    isGap: boolean = settings.gaps.show && gapWidth > 0 && gapWidth > (minGapWidth + (100 - settings.gaps.visibleGapsPercentage) * (maxGapWidth - minGapWidth) / 100);
 
                 if (isGap && dataPoints.length > 0) {
                     series.push({
@@ -974,7 +972,7 @@ module powerbi.visuals.samples {
                         selected: false,
                         labelSettings: seriesLabelSettings,
                         width: width,
-                        widthOfGap: widthOfGap
+                        widthOfGap: gapWidth
                     });
 
                     seriesCategoryIndex = 0;
@@ -1285,8 +1283,7 @@ module powerbi.visuals.samples {
                 this.data.series,
                 <D3.Scale.LinearScale> this.data.xScale,
                 this.data.settings.format,
-                this.data.settings.xAxis.dateFormat,
-                this.data.settings.xAxis.step);
+                this.data.settings.xAxis.dateFormat);
 
             this.data.series.forEach((series: PulseChartSeries, index: number) => {
                 series.xAxis = xAxes[index];
@@ -1401,8 +1398,7 @@ module powerbi.visuals.samples {
             series: PulseChartSeries[],
             originalScale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>,
             formatString: string,
-            dateFormat: PulseChartXAxisDateFormat,
-            step: number = 30): D3.Svg.Axis[] {
+            dateFormat: PulseChartXAxisDateFormat): D3.Svg.Axis[] {
 
             var xAxisProperties: PulseChartXAxisProperties[] = [];
 
@@ -1425,8 +1421,8 @@ module powerbi.visuals.samples {
                 });
 
                 values = isScalar
-                    ? d3.range(<number>minValue, <number>maxValue, step)
-                    : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue, step);
+                    ? d3.range(<number>minValue, <number>maxValue) 
+                    : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue);
 
                 return <PulseChartXAxisProperties> {
                     values: values,
@@ -1505,7 +1501,7 @@ module powerbi.visuals.samples {
         }
 
         private isIntersect(leftPoint: PulseChartPoint, rightPoint: PulseChartPoint): boolean {
-            return (leftPoint.x + this.data.widthOfXAxisLabel) > rightPoint.x;
+            return (leftPoint.x + this.data.widthOfXAxisLabel + PulseChart.xAxisTickSpace) > rightPoint.x;
         }
 
         private isAutoPlay(): boolean {
@@ -2648,11 +2644,6 @@ module powerbi.visuals.samples {
                 properties["position"],
                 defaultSettings.position);
 
-            var step = DataViewObjects.getValue<number>(
-                objects,
-                properties["step"],
-                defaultSettings.step);
-
             var dateFormat = DataViewObjects.getValue<PulseChartXAxisDateFormat>(
                 objects,
                 PulseChart.Properties["xAxis"]["dateFormat"],
@@ -2664,7 +2655,6 @@ module powerbi.visuals.samples {
                 fontColor: fontColor,
                 position: position,
                 show: show,
-                step: step,
             };
         }
 
@@ -2897,7 +2887,6 @@ module powerbi.visuals.samples {
                     fontColor: xAxisSettings.fontColor,
                     show: xAxisSettings.show,
                     position: xAxisSettings.position,
-                    step: xAxisSettings.step,
                     dateFormat: xAxisSettings.dateFormat
                 }
             });
