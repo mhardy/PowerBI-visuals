@@ -827,7 +827,7 @@ module powerbi.visuals.samples {
           return filterFunc(dataView.categorical.categories) || filterFunc(dataView.categorical.values);
         }
 
-        public converter(dataView: DataView, interactivityService?: IInteractivityService): PulseChartData {
+        public static converter(dataView: DataView, colors: IDataColorPalette, interactivityService?: IInteractivityService): PulseChartData {
             if (!dataView 
                 || !dataView.categorical
                 || !dataView.categorical.values
@@ -838,14 +838,9 @@ module powerbi.visuals.samples {
             }
 
             var columns: PulseChartDataRoles<DataViewCategoricalColumn> = <any>_.mapValues(PulseChart.RoleNames, (x,i) => PulseChart.getCategoricalColumnOfRole(dataView, i));
+            var timeStampColumn = <DataViewCategoryColumn>columns.Timestamp;
 
-            var category = <DataViewCategoryColumn>columns.Timestamp;
-            var eventTitleMeasure = <DataViewCategoryColumn>columns.EventTitle;
-            var eventDescriptionMeasure = <DataViewCategoryColumn>columns.EventDescription;
-            var eventSizeMeasure = <DataViewCategoryColumn>columns.EventSize;
-            var runnerCounterMeasure = columns.RunnerCounter;
-
-            if (!category) {
+            if (!timeStampColumn) {
                 // console.error("dataView.categorical.categories[categoryMeasureIndex] not found");
                 return null;
             }
@@ -855,10 +850,10 @@ module powerbi.visuals.samples {
             //     PulseChart.Properties["general"]["formatString"],
             //     ValueType.fromDescriptor({ text: true }));
 
-            var isScalar: boolean = !(category.source && category.source.type && category.source.type.dateTime);
-            var settings: PulseChartSettings = this.parseSettings(dataView, isScalar, columns);
+            var isScalar: boolean = !(timeStampColumn.source && timeStampColumn.source.type && timeStampColumn.source.type.dateTime);
+            var settings: PulseChartSettings = PulseChart.parseSettings(dataView, colors, isScalar, columns);
 
-            var categoryValues: any[] = category.values;
+            var categoryValues: any[] = timeStampColumn.values;
 
             if (!categoryValues || _.isEmpty(dataView.categorical.values)) {
                 return null;
@@ -867,7 +862,7 @@ module powerbi.visuals.samples {
             var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
-            var runnerCounterFormatString = runnerCounterMeasure && visuals.valueFormatter.getFormatString(runnerCounterMeasure.source, settings.formatStringProperty);
+            var runnerCounterFormatString = columns.RunnerCounter && visuals.valueFormatter.getFormatString(columns.RunnerCounter.source, settings.formatStringProperty);
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
 
             var minSize: number = PulseChart.DefaultSettings.dots.minSize;
@@ -877,9 +872,9 @@ module powerbi.visuals.samples {
                     maxSize = settings.dots.maxSize;
                 }
 
-            var eventSizeScale: D3.Scale.LinearScale = <D3.Scale.LinearScale> this.createScale(
+            var eventSizeScale: D3.Scale.LinearScale = <D3.Scale.LinearScale> PulseChart.createScale(
                 true,
-                eventSizeMeasure ? [d3.min(eventSizeMeasure.values), d3.max(eventSizeMeasure.values)] : [0, 0],
+                columns.EventSize ? [d3.min(columns.EventSize.values), d3.max(columns.EventSize.values)] : [0, 0],
                 minSize,
                 maxSize);
 
@@ -887,12 +882,12 @@ module powerbi.visuals.samples {
             isScalar = CartesianHelper.isScalar(isScalar, xAxisCardProperties);
             var categorical = ColumnUtil.applyUserMinMax(isScalar, dataView.categorical, xAxisCardProperties);
 
-            var categoryType: ValueType = AxisHelper.getCategoryValueType(category.source, isScalar);
+            var categoryType: ValueType = AxisHelper.getCategoryValueType(timeStampColumn.source, isScalar);
             var isDateTime = AxisHelper.isDateTime(categoryType);
             //var categoryValues: any[] = category.values;
             var series: PulseChartSeries[] = [];
-            var seriesLen = category.values ? category.values.length : 0;
-            var hasDynamicSeries = !!(category.values && category.source);
+            var seriesLen = timeStampColumn.values ? timeStampColumn.values.length : 0;
+            var hasDynamicSeries = !!(timeStampColumn.values && timeStampColumn.source);
 
             var defaultLabelSettings: LineChartDataLabelsSettings = dataLabelUtils.getDefaultLineChartLabelSettings();
 
@@ -924,7 +919,7 @@ module powerbi.visuals.samples {
 
             var seriesIndex: number = 0;
 
-            var column = category;
+   
             var dataPoints: PulseChartDataPoint[] = [];
             var groupedIdentity = grouped[seriesIndex];
 
@@ -945,13 +940,13 @@ module powerbi.visuals.samples {
             var gapWidths = PulseChart.getGapWidths(categoryValues);
             var maxGapWidth = Math.max.apply(null, gapWidths);
 
-            for (var categoryIndex = 0, seriesCategoryIndex = 0, len = column.values.length; categoryIndex < len; categoryIndex++ , seriesCategoryIndex++) {
+            for (var categoryIndex = 0, seriesCategoryIndex = 0, len = timeStampColumn.values.length; categoryIndex < len; categoryIndex++ , seriesCategoryIndex++) {
                 var categoryValue = categoryValues[categoryIndex];
-                var value = AxisHelper.normalizeNonFiniteNumber(column.values[categoryIndex]);
-                var runnerCounterValue = runnerCounterMeasure && runnerCounterMeasure.values && runnerCounterMeasure.values[categoryIndex];
+                var value = AxisHelper.normalizeNonFiniteNumber(timeStampColumn.values[categoryIndex]);
+                var runnerCounterValue = columns.RunnerCounter && columns.RunnerCounter.values && columns.RunnerCounter.values[categoryIndex];
 
                 var identity = SelectionIdBuilder.builder()
-                    .withCategory(column, categoryIndex)
+                    .withCategory(timeStampColumn, categoryIndex)
                     .createSelectionId();
 
                 var key = identity.getKey(),
@@ -965,8 +960,8 @@ module powerbi.visuals.samples {
                         key: key,
                         lineIndex: seriesIndex,
                         color: color,
-                        xCol: category.source,
-                        yCol: column.source,
+                        xCol: timeStampColumn.source,
+                        yCol: timeStampColumn.source,
                         data: dataPoints,
                         identity: identity,
                         selected: false,
@@ -999,10 +994,10 @@ module powerbi.visuals.samples {
                 }
 
                 var popupInfo: PulseChartTooltipData = null;
-                var eventSize = (eventSizeMeasure && eventSizeMeasure.values && eventSizeMeasure.values[categoryIndex]) || 0;
+                var eventSize = (columns.EventSize && columns.EventSize.values && columns.EventSize.values[categoryIndex]) || 0;
 
-                if ((eventTitleMeasure && eventTitleMeasure.values[categoryIndex]) ||
-                    (eventDescriptionMeasure && eventDescriptionMeasure.values[categoryIndex])) {
+                if ((columns.EventTitle && columns.EventTitle.values && columns.EventTitle.values[categoryIndex]) ||
+                    (columns.EventDescription && columns.EventDescription.values && columns.EventDescription.values[categoryIndex])) {
                     var time = categoryValue;
 
                     if (isDateTime && categoryValue) {
@@ -1012,8 +1007,8 @@ module powerbi.visuals.samples {
 
                     popupInfo = {
                         time: time,
-                        title: eventTitleMeasure.values[categoryIndex],
-                        description: eventDescriptionMeasure.values[categoryIndex],
+                        title: columns.EventTitle && columns.EventTitle.values && columns.EventTitle.values[categoryIndex],
+                        description: columns.EventDescription && columns.EventDescription.values && columns.EventDescription.values[categoryIndex],
                         size: eventSize,
                     };
                 }
@@ -1054,8 +1049,8 @@ module powerbi.visuals.samples {
                     key: key,
                     lineIndex: seriesIndex,
                     color: color,
-                    xCol: category.source,
-                    yCol: column.source,
+                    xCol: timeStampColumn.source,
+                    yCol: timeStampColumn.source,
                     data: dataPoints,
                     identity: identity,
                     selected: false,
@@ -1083,7 +1078,7 @@ module powerbi.visuals.samples {
                 }
             }
 
-            var axesLabels = converterHelper.createAxesLabels(xAxisCardProperties, valueAxisProperties, category.source, valuesMetadataArray);
+            var axesLabels = converterHelper.createAxesLabels(xAxisCardProperties, valueAxisProperties, timeStampColumn.source, valuesMetadataArray);
             if (interactivityService) {
                 interactivityService.applySelectionStateToData(series);
             }
@@ -1095,7 +1090,7 @@ module powerbi.visuals.samples {
                 dataLabelsSettings: defaultLabelSettings,
                 axesLabels: { x: axesLabels.xAxisLabel, y: axesLabels.yAxisLabel },
                 hasDynamicSeries: hasDynamicSeries,
-                categoryMetadata: category.source,
+                categoryMetadata: timeStampColumn.source,
                 categories: categoryValues,
                 settings: settings,
                 grouped: grouped,
@@ -1130,6 +1125,20 @@ module powerbi.visuals.samples {
             }
 
             return result;
+        }
+
+        private static createScale(isScalar: boolean, domain: (number | Date)[], minX: number, maxX: number): D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale> {
+            var scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale>;
+
+            if (isScalar) {
+                scale = d3.scale.linear();
+            } else {
+                scale = d3.time.scale();
+            }
+
+            return scale
+                .domain(domain)
+                .rangeRound([minX, maxX]);
         }
 
         public init(options: VisualInitOptions): void {
@@ -1168,7 +1177,7 @@ module powerbi.visuals.samples {
             this.viewport = $.extend({}, options.viewport);
             var dataView: DataView = options.dataViews[0];
 
-            this.data = this.converter(dataView);
+            this.data = PulseChart.converter(dataView, this.colors);
             if (!this.validateData(this.data)) {
                 this.clear();
                 return;
@@ -1280,25 +1289,11 @@ module powerbi.visuals.samples {
         private getXAxisScale(): D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale> {
             var data: PulseChartData = this.data;
 
-            return this.createScale(
+            return PulseChart.createScale(
                 data.isScalar,
                 [data.categories[0], data.categories[data.categories.length - 1]],
                 0,
                 this.size.width);
-        }
-
-        private createScale(isScalar: boolean, domain: (number | Date)[], minX: number, maxX: number): D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale> {
-            var scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale>;
-
-            if (isScalar) {
-                scale = d3.scale.linear();
-            } else {
-                scale = d3.time.scale();
-            }
-
-            return scale
-                .domain(domain)
-                .rangeRound([minX, maxX]);
         }
 
         private getCommonYAxisScale(scales: D3.Scale.LinearScale[]): D3.Scale.LinearScale {
@@ -1306,7 +1301,7 @@ module powerbi.visuals.samples {
 
             scales.forEach((scale: D3.Scale.LinearScale) => domain = domain.concat(scale.domain()));
 
-            return <D3.Scale.LinearScale> this.createScale(
+            return <D3.Scale.LinearScale> PulseChart.createScale(
                 true,
                 [d3.max(domain), d3.min(domain)],
                 0,
@@ -1339,7 +1334,7 @@ module powerbi.visuals.samples {
                     }
                 });
 
-                return this.createScale(true, [maxValue, minValue], stepOfHeight * index, stepOfHeight * (index + 1));
+                return PulseChart.createScale(true, [maxValue, minValue], stepOfHeight * index, stepOfHeight * (index + 1));
             });
         }
 
@@ -1401,7 +1396,7 @@ module powerbi.visuals.samples {
                     maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue),
                     values: (Date | number)[] = [];
 
-                scale = this.createScale(isScalar, [minValue, maxValue], minX, maxX);
+                scale = PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
 
                 formatter = valueFormatter.create({
                     format: formatString,
@@ -2425,12 +2420,12 @@ module powerbi.visuals.samples {
             return dataView.metadata.objects;
         }
 
-        private parseSettings(dataView: DataView, isScalar: boolean, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartSettings {
+        private static parseSettings(dataView: DataView, colors: IDataColorPalette, isScalar: boolean, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartSettings {
             var settings: PulseChartSettings = <PulseChartSettings>{},
                 objects: DataViewObjects = PulseChart.getObjectsFromDataView(dataView);
 
-            settings.xAxis = this.getAxisXSettings(objects);
-            settings.yAxis = this.getAxisYSettings(objects);
+            settings.xAxis = this.getAxisXSettings(objects, colors);
+            settings.yAxis = this.getAxisYSettings(objects, colors);
             if (isScalar) {
                 settings.format = ValueFormatter.getFormatString(columns.Timestamp.source,
                     PulseChart.DefaultSettings.formatStringProperty);
@@ -2442,18 +2437,18 @@ module powerbi.visuals.samples {
                 settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
             }
 
-            settings.popup = this.getPopupSettings(objects);
-            settings.dots = this.getDotsSettings(objects);
+            settings.popup = this.getPopupSettings(objects, colors);
+            settings.dots = this.getDotsSettings(objects, colors);
 
-            settings.series = this.getSeriesSettings(objects);
+            settings.series = this.getSeriesSettings(objects, colors);
             settings.gaps = this.getGapsSettings(objects);
-            settings.playback = this.getPlaybackSettings(objects);
-            settings.runnerCounter = this.getRunnerCounterSettings(objects, columns);
+            settings.playback = this.getPlaybackSettings(objects, colors);
+            settings.runnerCounter = this.getRunnerCounterSettings(objects, colors, columns);
 
             return settings;
         }
 
-        private getPopupSettings(objects: DataViewObjects): PulseChartPopup {
+        private static getPopupSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartPopup {
             var alwaysOnTop: boolean =  DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["popup"]["alwaysOnTop"],
@@ -2470,7 +2465,7 @@ module powerbi.visuals.samples {
                 PulseChart.DefaultSettings.popup.width)));
 
             var colorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["popup"]["color"],
                 PulseChart.DefaultSettings.popup.color);
 
@@ -2482,7 +2477,7 @@ module powerbi.visuals.samples {
                 PulseChart.DefaultSettings.popup.fontSize), 10);
 
             var fontColorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["popup"]["fontColor"],
                 PulseChart.DefaultSettings.popup.fontColor);
 
@@ -2494,14 +2489,14 @@ module powerbi.visuals.samples {
                 PulseChart.DefaultSettings.popup.showTime);
 
             var timeColorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["popup"]["timeColor"],
                 PulseChart.DefaultSettings.popup.timeColor);
 
             var timeColor = timeColorHelper.getColorForMeasure(objects, "");
 
             var timeFillHelper = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["popup"]["timeFill"],
                 PulseChart.DefaultSettings.popup.timeFill);
 
@@ -2519,12 +2514,12 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getDotsSettings(objects: DataViewObjects): PulseChartDotsSettings {
+        private static getDotsSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartDotsSettings {
             var properties = PulseChart.Properties["dots"],
                 defaultSettings: PulseChartDotsSettings = PulseChart.DefaultSettings.dots;
 
             var colorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 properties["color"],
                 defaultSettings.color);
 
@@ -2571,14 +2566,14 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getSeriesSettings(objects: DataViewObjects): PulseChartSeriesSetting {
+        private static getSeriesSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartSeriesSetting {
             var width = DataViewObjects.getValue<number>(
                 objects,
                 PulseChart.Properties["series"]["width"],
                 PulseChart.DefaultSettings.series.width);
 
             var colorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["series"]["fill"],
                 PulseChart.DefaultSettings.series.fill);
 
@@ -2596,7 +2591,7 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getGapsSettings(objects: DataViewObjects): PulseChartGapsSettings {
+        private static getGapsSettings(objects: DataViewObjects): PulseChartGapsSettings {
             var show =  DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["gaps"]["show"],
@@ -2612,18 +2607,18 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getAxisXSettings(objects: DataViewObjects): PulseChartXAxisSettings {
+        private static getAxisXSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartXAxisSettings {
             var xAxisSettings: PulseChartXAxisSettings = <PulseChartXAxisSettings> {};
             var properties = PulseChart.Properties["xAxis"],
             defaultSettings: PulseChartXAxisSettings = PulseChart.DefaultSettings.xAxis;
 
-            var colorHelper = new ColorHelper(this.colors,
+            var colorHelper = new ColorHelper(colors,
                 properties["color"],
                 defaultSettings.color);
 
             var color = colorHelper.getColorForMeasure(objects, "");
 
-            var fontColorHelper = new ColorHelper(this.colors,
+            var fontColorHelper = new ColorHelper(colors,
                 properties["fontColor"],
                 defaultSettings.fontColor);
 
@@ -2659,20 +2654,20 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getAxisYSettings(objects: DataViewObjects): PulseChartYAxisSettings {
+        private static getAxisYSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartYAxisSettings {
             var yAxisSettings: PulseChartYAxisSettings = <PulseChartYAxisSettings> {};
             var properties = PulseChart.Properties["yAxis"],
                 defaultSettings: PulseChartYAxisSettings = PulseChart.DefaultSettings.yAxis;
 
             var colorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 properties["color"],
                 defaultSettings.color);
 
             var color = colorHelper.getColorForMeasure(objects, "");
 
             var fontColorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 properties["fontColor"],
                 defaultSettings.fontColor);
 
@@ -2690,7 +2685,7 @@ module powerbi.visuals.samples {
             };
         }
 
-        private getPlaybackSettings(objects: DataViewObjects): PulseChartPlaybackSettings {
+        private static getPlaybackSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartPlaybackSettings {
             var playbackSettings: PulseChartPlaybackSettings = <PulseChartPlaybackSettings> {};
             var properties = PulseChart.Properties["playback"],
                 defaultSettings: PulseChartPlaybackSettings = PulseChart.DefaultSettings.playback;
@@ -2716,7 +2711,7 @@ module powerbi.visuals.samples {
                 defaultSettings.autoplayPauseDuration);
 
             var colorHelper = new ColorHelper(
-                this.colors,
+                colors,
                 properties["color"],
                 defaultSettings.color);
 
@@ -2725,7 +2720,7 @@ module powerbi.visuals.samples {
             return playbackSettings;
         }
 
-        private getRunnerCounterSettings(objects: DataViewObjects, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartRunnerCounterSettings {
+        private static getRunnerCounterSettings(objects: DataViewObjects, colors: IDataColorPalette, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartRunnerCounterSettings {
             var show: boolean =  DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["runnerCounter"]["show"],
@@ -2748,7 +2743,7 @@ module powerbi.visuals.samples {
                 PulseChart.DefaultSettings.runnerCounter.fontSize), 10);
 
             var fontColor = new ColorHelper(
-                this.colors,
+                colors,
                 PulseChart.Properties["runnerCounter"]["fontColor"],
                 PulseChart.DefaultSettings.runnerCounter.fontColor)
                 .getColorForMeasure(objects, "");
