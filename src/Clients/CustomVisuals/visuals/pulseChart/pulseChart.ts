@@ -171,7 +171,7 @@ module powerbi.visuals.samples {
 
     export interface PulseChartXAxisSettings extends PulseChartAxisSettings {
         position: XAxisPosition;
-        dateFormat: PulseChartXAxisDateFormat;
+        dateFormat?: PulseChartXAxisDateFormat;
     }
 
     export interface PulseChartYAxisSettings extends PulseChartAxisSettings {
@@ -499,10 +499,10 @@ module powerbi.visuals.samples {
                             displayName: "Axis Color",
                             type: { fill: { solid: { color: true } } }
                         },
-                        dateFormat: {
+                        /*dateFormat: {
                             displayName: "Date format",
                             type: { enumeration: createEnumTypeFromEnum(PulseChartXAxisDateFormat) }
-                        }
+                        }*/
                     }
                 },
                 yAxis: {
@@ -856,7 +856,7 @@ module powerbi.visuals.samples {
             //     ValueType.fromDescriptor({ text: true }));
 
             var isScalar: boolean = !(timeStampColumn.source && timeStampColumn.source.type && timeStampColumn.source.type.dateTime);
-            var settings: PulseChartSettings = PulseChart.parseSettings(dataView, colors, isScalar, columns);
+            var settings: PulseChartSettings = PulseChart.parseSettings(dataView, colors, columns);
 
             var categoryValues: any[] = timeStampColumn.values;
 
@@ -864,6 +864,22 @@ module powerbi.visuals.samples {
                 return null;
             }
 
+            var minCategoryValue = Math.min.apply(null, categoryValues), maxCategoryValue = Math.max.apply(null, categoryValues);
+            settings.xAxis.dateFormat = 
+                (maxCategoryValue - minCategoryValue < (24 * 60 * 60 * 10000) 
+                    && new Date(maxCategoryValue).getDate() === new Date(minCategoryValue).getDate()) 
+                    ? PulseChartXAxisDateFormat.TimeOnly 
+                    : PulseChartXAxisDateFormat.DateOnly;
+            if (isScalar) {
+                settings.format = ValueFormatter.getFormatString(timeStampColumn.source,
+                    PulseChart.DefaultSettings.formatStringProperty);
+            } else {
+                var values = dataView.categorical.categories;
+                var dateFormatString: string = values && values[0]
+                    ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty)
+                    : timeStampColumn.source.format;
+                settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
+            }
             var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
@@ -2424,23 +2440,12 @@ module powerbi.visuals.samples {
             return dataView.metadata.objects;
         }
 
-        private static parseSettings(dataView: DataView, colors: IDataColorPalette, isScalar: boolean, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartSettings {
+        private static parseSettings(dataView: DataView, colors: IDataColorPalette, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartSettings {
             var settings: PulseChartSettings = <PulseChartSettings>{},
                 objects: DataViewObjects = PulseChart.getObjectsFromDataView(dataView);
 
             settings.xAxis = this.getAxisXSettings(objects, colors);
             settings.yAxis = this.getAxisYSettings(objects, colors);
-            if (isScalar) {
-                settings.format = ValueFormatter.getFormatString(columns.Timestamp.source,
-                    PulseChart.DefaultSettings.formatStringProperty);
-            } else {
-                var values = dataView.categorical.categories;
-                var dateFormatString: string = values && values[0]
-                    ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty)
-                    : columns.Timestamp.source.format;
-                settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
-            }
-
             settings.popup = this.getPopupSettings(objects, colors);
             settings.dots = this.getDotsSettings(objects, colors);
 
@@ -2638,14 +2643,14 @@ module powerbi.visuals.samples {
                 properties["position"],
                 defaultSettings.position);
 
-            var dateFormat = DataViewObjects.getValue<PulseChartXAxisDateFormat>(
+            /*var dateFormat = DataViewObjects.getValue<PulseChartXAxisDateFormat>(
                 objects,
                 PulseChart.Properties["xAxis"]["dateFormat"],
-                PulseChart.DefaultSettings.xAxis.dateFormat);
+                PulseChart.DefaultSettings.xAxis.dateFormat);*/
 
             return {
                 color: color,
-                dateFormat: dateFormat,
+                //dateFormat: dateFormat,
                 fontColor: fontColor,
                 position: position,
                 show: show,
@@ -2881,7 +2886,7 @@ module powerbi.visuals.samples {
                     fontColor: xAxisSettings.fontColor,
                     show: xAxisSettings.show,
                     position: xAxisSettings.position,
-                    dateFormat: xAxisSettings.dateFormat
+                    //dateFormat: xAxisSettings.dateFormat
                 }
             });
         }
