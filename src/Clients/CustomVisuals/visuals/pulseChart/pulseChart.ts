@@ -283,11 +283,12 @@ module powerbi.visuals.samples {
                     name: PulseChart.RoleNames.Value,
                     kind: powerbi.VisualDataRoleKind.Measure
                 },
+				/* Temporary disabled
                 {
                     displayName: PulseChart.RoleDisplayNames.Category,
                     name: PulseChart.RoleNames.Category,
                     kind: powerbi.VisualDataRoleKind.Grouping
-                },
+                },*/
                 {
                     displayName: PulseChart.RoleDisplayNames.EventTitle,
                     name: PulseChart.RoleNames.EventTitle,
@@ -713,7 +714,7 @@ module powerbi.visuals.samples {
                 show: true
             },
             playback: {
-                autoplay: true,
+                autoplay: false,
                 playSpeed: 5,
                 pauseDuration: 10,
                 autoplayPauseDuration: 0,
@@ -774,7 +775,7 @@ module powerbi.visuals.samples {
 
         private static MinGapWidth = 60 * 1000;
 
-        private static MaxCountOfTicksOnYAxis: number = 3;
+        private static MaxCountOfTicksOnYAxis: number = 10;
 
         private lastSelectedPoint: SelectionId;
 
@@ -834,7 +835,7 @@ module powerbi.visuals.samples {
         }
 
         public static converter(dataView: DataView, colors: IDataColorPalette, interactivityService?: IInteractivityService): PulseChartData {
-            if (!dataView 
+            if (!dataView
                 || !dataView.categorical
                 || !dataView.categorical.values
                 || !dataView.categorical.values[0]
@@ -925,7 +926,7 @@ module powerbi.visuals.samples {
 
             var seriesIndex: number = 0;
 
-   
+
             var dataPoints: PulseChartDataPoint[] = [];
             var groupedIdentity = grouped[seriesIndex];
 
@@ -1144,7 +1145,7 @@ module powerbi.visuals.samples {
 
             return scale
                 .domain(domain)
-                .rangeRound([minX, maxX]);
+                .range([minX, maxX]);
         }
 
         public init(options: VisualInitOptions): void {
@@ -1345,6 +1346,19 @@ module powerbi.visuals.samples {
         }
 
         private createAxisY(show: boolean = true): D3.Svg.Axis {
+            var formatter: IValueFormatter,
+                data: PulseChartData = this.data,
+                scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.OrdinalScale> = this.data.commonYScale;
+
+            var ticks: number = Math.max(2, Math.round(this.size.height / 40));
+            var yAxis: D3.Svg.Axis = d3.svg.axis()
+                .scale(scale)
+                .ticks(Math.round(ticks))
+                .outerTickSize(0);
+            return yAxis;
+        }
+
+        private createAxisYWithCategories(show: boolean = true): D3.Svg.Axis {
             var formatter: IValueFormatter,
                 data: PulseChartData = this.data,
                 scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.OrdinalScale> = this.data.commonYScale,
@@ -1682,7 +1696,7 @@ module powerbi.visuals.samples {
                 .call(yAxis)
                 .attr('display', isShow ? 'inline' : 'none');
 
-             this.yAxis.selectAll('.domain, .path, .line').style('stroke', color);
+             this.yAxis.selectAll('.domain, path, line').style('stroke', color);
              this.yAxis.selectAll('text').style('fill', fontColor);
         }
 
@@ -2431,8 +2445,8 @@ module powerbi.visuals.samples {
                     PulseChart.DefaultSettings.formatStringProperty);
             } else {
                 var values = dataView.categorical.categories;
-                var dateFormatString: string = values && values[0] 
-                    ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty) 
+                var dateFormatString: string = values && values[0]
+                    ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty)
                     : columns.Timestamp.source.format;
                 settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
             }
@@ -2729,7 +2743,7 @@ module powerbi.visuals.samples {
             var label: string = DataViewObjects.getValue<string>(
                 objects,
                 PulseChart.Properties["runnerCounter"]["label"],
-                columns.RunnerCounter && columns.RunnerCounter.source && columns.RunnerCounter.source.displayName 
+                columns.RunnerCounter && columns.RunnerCounter.source && columns.RunnerCounter.source.displayName
                     || PulseChart.DefaultSettings.runnerCounter.label);
 
             var position = DataViewObjects.getValue<RunnerCounterPosition>(
