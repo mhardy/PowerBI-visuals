@@ -578,7 +578,12 @@ module powerbi.visuals.samples {
                 },
             },
             sorting: {
-                default: {},
+                implicit: {
+                    clauses: [{
+                            role: PulseChart.RoleNames.Timestamp,
+                            direction: 1//SortDirection.Ascending
+                        }]
+                }
             }
         };
 
@@ -746,6 +751,7 @@ module powerbi.visuals.samples {
         private animationHandler: PulseAnimator;
         private behavior: IInteractiveBehavior;
         private colors: IDataColorPalette;
+        private host: IVisualHostServices;
 
         private static DefaultMargin: IMargin = {
             top: 120,
@@ -1143,8 +1149,8 @@ module powerbi.visuals.samples {
 
         public init(options: VisualInitOptions): void {
             (<any>powerbi.formattingService).initialize();//Fixes the framework bug: "Cannot read property 'getFormatString' of undefined".
-
-            this.selectionManager = new SelectionManager({ hostServices: options.host });
+            this.host  = options.host;
+            this.selectionManager = new SelectionManager({ hostServices: this.host });
             var svg: D3.Selection = this.svg = d3.select(options.element.get(0))
                 .append('svg')
                 .classed('pulseChart', true);
@@ -2030,23 +2036,17 @@ module powerbi.visuals.samples {
                 currentSeries: number = this.animationHandler.getCurrentSeries(),
                 currentIndex: number = this.animationHandler.getCurrentIndex();
 
-                var selection: D3.UpdateSelection = rootSelection.filter((d, index) => {
-                    if (isAnimated) {
-                        return index <= currentSeries;
-                    }
-                    return true;
-                 })
+           var selection: D3.UpdateSelection = rootSelection.filter((d, index) => !isAnimated || index <= currentSeries)
                 .select(nodeParent.selector)
                 .selectAll(node.selector)
-                  .data((d: PulseChartSeries, seriesIndex: number) => {
-
-                      return _.filter(d.data, (value: PulseChartDataPoint, valueIndex: number): boolean => {
-                            if (isAnimated && (seriesIndex === currentSeries) && (valueIndex > currentIndex)) {
-                                return false;
-                            }
-                            return (!!value.popupInfo);
-                        });
-                   });
+                .data((d: PulseChartSeries, seriesIndex: number) => {
+                    return _.filter(d.data, (value: PulseChartDataPoint, valueIndex: number): boolean => {
+                        if (isAnimated && (seriesIndex === currentSeries) && (valueIndex > currentIndex)) {
+                            return false;
+                        }
+                        return (!!value.popupInfo);
+                    });
+                });
 
             selection
                 .enter()
