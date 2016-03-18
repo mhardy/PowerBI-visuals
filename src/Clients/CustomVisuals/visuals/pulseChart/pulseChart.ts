@@ -157,6 +157,7 @@ module powerbi.visuals.samples {
 
     export interface PulseChartRunnerCounterSettings {
         show: boolean;
+        label: string;
         position: RunnerCounterPosition;
         fontSize: number;
         fontColor: string;
@@ -196,6 +197,7 @@ module powerbi.visuals.samples {
     }
 
     export interface PulseChartData {
+        columns: PulseChartDataRoles<DataViewCategoricalColumn>;
         categoryMetadata: DataViewMetadataColumn;
         hasHighlights?: boolean;
 
@@ -245,9 +247,19 @@ module powerbi.visuals.samples {
         value: Date | number;
     }
 
+    interface PulseChartDataRoles<T> {
+        Timestamp?: T;
+        Category?: T;
+        Value?: T;
+        EventTitle?: T;
+        EventDescription?: T;
+        EventSize?: T;
+        RunnerCounter?: T;
+    }
+
     export class PulseChart implements IVisual {
 
-        public static RoleNames = {
+        public static RoleDisplayNames = <PulseChartDataRoles<string>>{
             Timestamp: "Timestamp",
             Category: "Category",
             Value: "Value",
@@ -257,72 +269,74 @@ module powerbi.visuals.samples {
             RunnerCounter: "Runner Counter",
         };
 
+        public static RoleNames = <PulseChartDataRoles<string>>_.mapValues(PulseChart.RoleDisplayNames, (x, i) => i);
+
         public static capabilities: VisualCapabilities = {
             dataRoles: [
                 {
-                    displayName: PulseChart.RoleNames.Timestamp,
+                    displayName: PulseChart.RoleDisplayNames.Timestamp,
                     name: PulseChart.RoleNames.Timestamp,
                     kind: powerbi.VisualDataRoleKind.Grouping
                 },
                 {
-                    displayName: PulseChart.RoleNames.Value,
+                    displayName: PulseChart.RoleDisplayNames.Value,
                     name: PulseChart.RoleNames.Value,
                     kind: powerbi.VisualDataRoleKind.Measure
                 },
                 {
-                    displayName: PulseChart.RoleNames.Category,
+                    displayName: PulseChart.RoleDisplayNames.Category,
                     name: PulseChart.RoleNames.Category,
                     kind: powerbi.VisualDataRoleKind.Grouping
                 },
                 {
-                    displayName: PulseChart.RoleNames.EventTitle,
+                    displayName: PulseChart.RoleDisplayNames.EventTitle,
                     name: PulseChart.RoleNames.EventTitle,
                     kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
                 },
                 {
-                    displayName: PulseChart.RoleNames.EventDescription,
+                    displayName: PulseChart.RoleDisplayNames.EventDescription,
                     name: PulseChart.RoleNames.EventDescription,
                     kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
                 },
                 {
-                    displayName: PulseChart.RoleNames.EventSize,
+                    displayName: PulseChart.RoleDisplayNames.EventSize,
                     name: PulseChart.RoleNames.EventSize,
                     kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
                 },
                 {
-                    displayName: PulseChart.RoleNames.RunnerCounter,
+                    displayName: PulseChart.RoleDisplayNames.RunnerCounter,
                     name: PulseChart.RoleNames.RunnerCounter,
                     kind: powerbi.VisualDataRoleKind.GroupingOrMeasure
                 },
             ],
             dataViewMappings: [{
-                conditions: [
-                    {
-                        'Timestamp': { min: 1, max: 1 },
-                        'Value': { max: 0 },
-                        'Category': { max: 0 },
-                        'EventTitle': { max: 0 },
-                        'EventDescription': { max: 0 },
-                        'EventSize': { max: 0 },
-                        'RunnerCounter': { min: 0, max: 1 },
+                conditions: <any>[
+                    <PulseChartDataRoles<NumberRange>> {
+                        Timestamp: { min: 1, max: 1 },
+                        Value: { max: 0 },
+                        Category: { max: 0 },
+                        EventTitle: { max: 0 },
+                        EventDescription: { max: 0 },
+                        EventSize: { max: 0 },
+                        RunnerCounter: { min: 0, max: 1 },
                     },
-                    {
-                        'Timestamp': { min: 1, max: 1 },
-                        'Value': { min: 1, max: 1 },
-                        'Category': { max: 0 },
-                        'EventTitle': { max: 0 },
-                        'EventDescription': { max: 0 },
-                        'EventSize': { max: 0 },
-                        'RunnerCounter': { min: 0, max: 1 },
+                    <PulseChartDataRoles<NumberRange>> {
+                        Timestamp: { min: 1, max: 1 },
+                        Value: { min: 1, max: 1 },
+                        Category: { max: 0 },
+                        EventTitle: { max: 0 },
+                        EventDescription: { max: 0 },
+                        EventSize: { max: 0 },
+                        RunnerCounter: { min: 0, max: 1 },
                     },
-                    {
-                        'Timestamp': { min: 1, max: 1 },
-                        'Value': { min: 1, max: 1 },
-                        'Category': { max: 1 },
-                        'EventTitle': { max: 1 },
-                        'EventDescription': { max: 1 },
-                        'EventSize': { max: 1 },
-                        'RunnerCounter': { min: 0, max: 1 },
+                    <PulseChartDataRoles<NumberRange>> {
+                        Timestamp: { min: 1, max: 1 },
+                        Value: { min: 1, max: 1 },
+                        Category: { max: 1 },
+                        EventTitle: { max: 1 },
+                        EventDescription: { max: 1 },
+                        EventSize: { max: 1 },
+                        RunnerCounter: { min: 0, max: 1 },
                     }
                 ],
                 categorical: {
@@ -544,6 +558,10 @@ module powerbi.visuals.samples {
                             displayName: data.createDisplayNameGetter("Visual_Show"),
                             type: { bool: true }
                         },
+                        label: {
+                            displayName: "Label",
+                            type: { text: true }
+                        },
                         position: {
                             displayName: "Position",
                             type: { enumeration: createEnumTypeFromEnum(RunnerCounterPosition) }
@@ -698,6 +716,7 @@ module powerbi.visuals.samples {
             },
             runnerCounter: {
                 show: true,
+                label: "",
                 position: RunnerCounterPosition.TopRight,
                 fontSize: 13,
                 fontColor: "#777777"
@@ -803,22 +822,14 @@ module powerbi.visuals.samples {
             this.margin = PulseChart.DefaultMargin;
         }
 
-        private static getMeasureIndexOfRole(categories: DataViewCategoryColumn[], roleName: string): number {
-          for (var i = 0; i < categories.length; i++) {
-              if (categories[i].source &&
-                  categories[i].source.roles &&
-                  categories[i].source.roles[roleName]) {
-                  return i;
-              }
-          }
-
-          return -1;
+        private static getCategoricalColumnOfRole(dataView: DataView, roleName: string): DataViewCategoryColumn | DataViewValueColumn {
+          var filterFunc = (cols: DataViewCategoricalColumn[]) => cols.filter((x) => x.source && x.source.roles && x.source.roles[roleName])[0];
+          return filterFunc(dataView.categorical.categories) || filterFunc(dataView.categorical.values);
         }
 
         public converter(dataView: DataView, interactivityService?: IInteractivityService): PulseChartData {
-            //console.log('PulseChart converter');
-
-            if (!dataView.categorical
+            if (!dataView 
+                || !dataView.categorical
                 || !dataView.categorical.values
                 || !dataView.categorical.values[0]
                 || !dataView.categorical.values[0].values
@@ -826,37 +837,26 @@ module powerbi.visuals.samples {
                     return null;
             }
 
+            var columns: PulseChartDataRoles<DataViewCategoricalColumn> = <any>_.mapValues(PulseChart.RoleNames, (x,i) => PulseChart.getCategoricalColumnOfRole(dataView, i));
+
+            var category = <DataViewCategoryColumn>columns.Timestamp;
+            var eventTitleMeasure = <DataViewCategoryColumn>columns.EventTitle;
+            var eventDescriptionMeasure = <DataViewCategoryColumn>columns.EventDescription;
+            var eventSizeMeasure = <DataViewCategoryColumn>columns.EventSize;
+            var runnerCounterMeasure = columns.RunnerCounter;
+
+            if (!category) {
+                // console.error("dataView.categorical.categories[categoryMeasureIndex] not found");
+                return null;
+            }
+
             // var isScalar: boolean = CartesianChart.getIsScalar(
             //     dataView.metadata ? dataView.metadata.objects : null,
             //     PulseChart.Properties["general"]["formatString"],
             //     ValueType.fromDescriptor({ text: true }));
 
-            var isScalar: boolean =
-                dataView && dataView.categorical && dataView.categorical.categories &&
-                dataView.categorical.categories[0] && dataView.categorical.categories[0].source &&
-                dataView.categorical.categories[0].source.type && dataView.categorical.categories[0].source.type.dateTime
-                ? false
-                : true;
-
-            var categories: DataViewCategoryColumn[] = dataView.categorical.categories;
-            var categoryMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.Timestamp);
-            var eventTitleMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventTitle);
-            var eventDescriptionMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventDescription);
-            var eventSizeMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.EventSize);
-            var runnerCounterMeasureIndex: number = PulseChart.getMeasureIndexOfRole(categories, PulseChart.RoleNames.RunnerCounter);
-
-            var settings: PulseChartSettings = this.parseSettings(dataView, isScalar, categories[categoryMeasureIndex]);
-
-            if (categoryMeasureIndex < 0) {
-                // console.error("categoryMeasureIndex not found");
-                return null;
-            }
-
-            var category: DataViewCategoryColumn = dataView.categorical.categories[categoryMeasureIndex];
-            if (!category) {
-                // console.error("dataView.categorical.categories[categoryMeasureIndex] not found");
-                return null;
-            }
+            var isScalar: boolean = !(category.source && category.source.type && category.source.type.dateTime);
+            var settings: PulseChartSettings = this.parseSettings(dataView, isScalar, columns);
 
             var categoryValues: any[] = category.values;
 
@@ -864,33 +864,11 @@ module powerbi.visuals.samples {
                 return null;
             }
 
-            var eventTitleValues: any[] = [];
-            if (eventTitleMeasureIndex >= 0) {
-                eventTitleValues = dataView.categorical.categories[eventTitleMeasureIndex].values;
-            }
-
-            var eventDescriptionValues: any[] = [];
-            if (eventDescriptionMeasureIndex >= 0) {
-                eventDescriptionValues = dataView.categorical.categories[eventDescriptionMeasureIndex].values;
-            }
-
             var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
-
+            var runnerCounterFormatString = runnerCounterMeasure && visuals.valueFormatter.getFormatString(runnerCounterMeasure.source, settings.formatStringProperty);
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
-
-            var eventSizeValues: any[] = [];
-            if (eventSizeMeasureIndex >= 0) {
-                eventSizeValues = dataView.categorical.categories[eventSizeMeasureIndex].values;
-            }
-
-            var runnerCounterValues: any[] = [];
-            var runnerCounterFormatString: string;
-            if(runnerCounterMeasureIndex >= 0) {
-                runnerCounterValues = dataView.categorical.categories[runnerCounterMeasureIndex].values;
-                runnerCounterFormatString = visuals.valueFormatter.getFormatString(dataView.categorical.categories[runnerCounterMeasureIndex].source, settings.formatStringProperty);
-            }
 
             var minSize: number = PulseChart.DefaultSettings.dots.minSize;
             var maxSize: number = PulseChart.DefaultSettings.dots.maxSize;
@@ -901,7 +879,7 @@ module powerbi.visuals.samples {
 
             var eventSizeScale: D3.Scale.LinearScale = <D3.Scale.LinearScale> this.createScale(
                 true,
-                [d3.min(eventSizeValues), d3.max(eventSizeValues)],
+                eventSizeMeasure ? [d3.min(eventSizeMeasure.values), d3.max(eventSizeMeasure.values)] : [0, 0],
                 minSize,
                 maxSize);
 
@@ -970,7 +948,7 @@ module powerbi.visuals.samples {
             for (var categoryIndex = 0, seriesCategoryIndex = 0, len = column.values.length; categoryIndex < len; categoryIndex++ , seriesCategoryIndex++) {
                 var categoryValue = categoryValues[categoryIndex];
                 var value = AxisHelper.normalizeNonFiniteNumber(column.values[categoryIndex]);
-                var runnerCounterValue = runnerCounterValues[categoryIndex];
+                var runnerCounterValue = runnerCounterMeasure && runnerCounterMeasure.values && runnerCounterMeasure.values[categoryIndex];
 
                 var identity = SelectionIdBuilder.builder()
                     .withCategory(column, categoryIndex)
@@ -1021,9 +999,10 @@ module powerbi.visuals.samples {
                 }
 
                 var popupInfo: PulseChartTooltipData = null;
+                var eventSize = (eventSizeMeasure && eventSizeMeasure.values && eventSizeMeasure.values[categoryIndex]) || 0;
 
-                if (eventTitleValues[categoryIndex] ||
-                    eventDescriptionValues[categoryIndex]) {
+                if ((eventTitleMeasure && eventTitleMeasure.values[categoryIndex]) ||
+                    (eventDescriptionMeasure && eventDescriptionMeasure.values[categoryIndex])) {
                     var time = categoryValue;
 
                     if (isDateTime && categoryValue) {
@@ -1033,9 +1012,9 @@ module powerbi.visuals.samples {
 
                     popupInfo = {
                         time: time,
-                        title: eventTitleValues[categoryIndex],
-                        description: eventDescriptionValues[categoryIndex],
-                        size: eventSizeValues[categoryIndex] || 0,
+                        title: eventTitleMeasure.values[categoryIndex],
+                        description: eventDescriptionMeasure.values[categoryIndex],
+                        size: eventSize,
                     };
                 }
 
@@ -1057,7 +1036,7 @@ module powerbi.visuals.samples {
                     y: y0,
                     pointColor: color,
                     groupIndex: PulseChart.getGroupIndex(categoryIndex, grouped),
-                    eventSize: eventSizeScale(eventSizeValues[categoryIndex]),
+                    eventSize: eventSizeScale(eventSize),
                     runnerCounterValue: runnerCounterValue,
                     runnerCounterFormatString: runnerCounterFormatString,
                 };
@@ -1110,6 +1089,7 @@ module powerbi.visuals.samples {
             }
 
             return {
+                columns: columns,
                 series: series,
                 isScalar: isScalar,
                 dataLabelsSettings: defaultLabelSettings,
@@ -1969,7 +1949,7 @@ module powerbi.visuals.samples {
                 var runnerCounterformatter = visuals.valueFormatter.create({ format: data[start].runnerCounterFormatString });
                 runnerCounterValue = runnerCounterformatter.format(runnerCounterValue);
             }
-            this.animationHandler.setRunnerCounterValue(runnerCounterValue);
+            this.animationHandler.setRunnerCounterValue(this.data.settings.runnerCounter.label + " " + runnerCounterValue);
 
             return (t: number) => {
 
@@ -2445,21 +2425,20 @@ module powerbi.visuals.samples {
             return dataView.metadata.objects;
         }
 
-        private parseSettings(dataView: DataView, isScalar: boolean, categoryColumn: DataViewCategoricalColumn): PulseChartSettings {
+        private parseSettings(dataView: DataView, isScalar: boolean, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartSettings {
             var settings: PulseChartSettings = <PulseChartSettings>{},
                 objects: DataViewObjects = PulseChart.getObjectsFromDataView(dataView);
 
             settings.xAxis = this.getAxisXSettings(objects);
             settings.yAxis = this.getAxisYSettings(objects);
             if (isScalar) {
-                settings.format = ValueFormatter.getFormatString(
-                    categoryColumn && categoryColumn.source,
+                settings.format = ValueFormatter.getFormatString(columns.Timestamp.source,
                     PulseChart.DefaultSettings.formatStringProperty);
             } else {
                 var values = dataView.categorical.categories;
                 var dateFormatString: string = values && values[0] 
                     ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty) 
-                    : categoryColumn.source.format;
+                    : columns.Timestamp.source.format;
                 settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
             }
 
@@ -2469,7 +2448,7 @@ module powerbi.visuals.samples {
             settings.series = this.getSeriesSettings(objects);
             settings.gaps = this.getGapsSettings(objects);
             settings.playback = this.getPlaybackSettings(objects);
-            settings.runnerCounter = this.getRunnerCounterSettings(objects);
+            settings.runnerCounter = this.getRunnerCounterSettings(objects, columns);
 
             return settings;
         }
@@ -2746,11 +2725,17 @@ module powerbi.visuals.samples {
             return playbackSettings;
         }
 
-        private getRunnerCounterSettings(objects: DataViewObjects): PulseChartRunnerCounterSettings {
+        private getRunnerCounterSettings(objects: DataViewObjects, columns: PulseChartDataRoles<DataViewCategoricalColumn>): PulseChartRunnerCounterSettings {
             var show: boolean =  DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["runnerCounter"]["show"],
                 PulseChart.DefaultSettings.runnerCounter.show);
+
+            var label: string = DataViewObjects.getValue<string>(
+                objects,
+                PulseChart.Properties["runnerCounter"]["label"],
+                columns.RunnerCounter && columns.RunnerCounter.source && columns.RunnerCounter.source.displayName 
+                    || PulseChart.DefaultSettings.runnerCounter.label);
 
             var position = DataViewObjects.getValue<RunnerCounterPosition>(
                 objects,
@@ -2770,6 +2755,7 @@ module powerbi.visuals.samples {
 
             return {
                 show: show,
+                label: label,
                 position: position,
                 fontSize: fontSize,
                 fontColor: fontColor
@@ -2980,16 +2966,19 @@ module powerbi.visuals.samples {
             var runnerCounterSettings: PulseChartRunnerCounterSettings =
                 this.data.settings.runnerCounter || PulseChart.DefaultSettings.runnerCounter;
 
-            enumeration.pushInstance({
-                objectName: "runnerCounter",
-                selector: null,
-                properties: {
-                    show: runnerCounterSettings.show,
-                    position: runnerCounterSettings.position,
-                    fontSize: runnerCounterSettings.fontSize,
-                    fontColor: runnerCounterSettings.fontColor
-                }
-            });
+            if(this.data.columns.RunnerCounter) {
+                enumeration.pushInstance({
+                    objectName: "runnerCounter",
+                    selector: null,
+                    properties: {
+                        show: runnerCounterSettings.show,
+                        label: runnerCounterSettings.label,
+                        position: runnerCounterSettings.position,
+                        fontSize: runnerCounterSettings.fontSize,
+                        fontColor: runnerCounterSettings.fontColor
+                    }
+                });
+            }
         }
     }
 
