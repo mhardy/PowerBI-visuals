@@ -1546,6 +1546,7 @@ module powerbi.visuals.samples {
                     this.animationHandler.setControlsColor(this.data.settings.playback.color);
                 }
             this.animationHandler.render(this.isAutoPlay());
+            this.animationHandler.setRunnerCounterValue();
 
             return result;
         }
@@ -1953,15 +1954,7 @@ module powerbi.visuals.samples {
                 .domain([0, 1])
                 .range([y0, y1]);
 
-            var runnerCounterValue: string = data[start].runnerCounterValue;
-            if(runnerCounterValue == null) {
-                runnerCounterValue = "";
-            }
-            if(data[start].runnerCounterFormatString) {
-                var runnerCounterformatter = visuals.valueFormatter.create({ format: data[start].runnerCounterFormatString });
-                runnerCounterValue = runnerCounterformatter.format(runnerCounterValue);
-            }
-            this.animationHandler.setRunnerCounterValue(this.data.settings.runnerCounter.label + " " + runnerCounterValue);
+            this.animationHandler.setRunnerCounterValue(data[start]);
 
             return (t: number) => {
 
@@ -3016,6 +3009,7 @@ module powerbi.visuals.samples {
 
         private container: D3.Selection;
 
+        private currentDataPoint: PulseChartDataPoint;
         private runnerCounterValue: any;
         private runnerCounterTopLeftPosition: number = 120;
         private get runnerCounterPosition(): RunnerCounterPosition {
@@ -3220,10 +3214,21 @@ module powerbi.visuals.samples {
             this.container.attr('display', 'block');
         }
 
-        public setRunnerCounterValue(value: any): void {
-            this.runnerCounterValue = value;
-            //console.log("Progress: ", value);
+        public setRunnerCounterValue(dataPoint?: PulseChartDataPoint): void {
+            if(dataPoint) {
+                this.currentDataPoint = dataPoint;
+            }
 
+            var runnerCounterValue: string = (this.currentDataPoint && this.currentDataPoint.runnerCounterValue != null)
+                ? this.currentDataPoint.runnerCounterValue
+                : "";
+
+            if(this.currentDataPoint && this.currentDataPoint.runnerCounterFormatString) {
+                var runnerCounterformatter = visuals.valueFormatter.create({ format: this.currentDataPoint.runnerCounterFormatString });
+                runnerCounterValue = runnerCounterformatter.format(runnerCounterValue);
+            }
+
+            this.runnerCounterValue = this.chart.data.settings.runnerCounter.label + " " + runnerCounterValue;
             this.drawCounterValue();
         }
 
