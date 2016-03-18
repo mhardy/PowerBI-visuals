@@ -66,6 +66,10 @@ module powerbi.visuals.samples {
         offsetX?: number;
     }
 
+    export interface PulseChartPointIndex {
+        series: number;
+		index: number;
+    }
     export interface PulseChartPointXY {
         x: number;
         y: number;
@@ -770,7 +774,7 @@ module powerbi.visuals.samples {
 
         private static MinGapWidth = <[number]>_.object(<any>[[
             PulseChartXAxisDateFormat.DateOnly, 60 * 1000 * 24], [
-            PulseChartXAxisDateFormat.TimeOnly, 60 * 1000], 
+            PulseChartXAxisDateFormat.TimeOnly, 60 * 1000],
             ], undefined);
 
         private static MaxCountOfTicksOnYAxis: number = 10;
@@ -1437,7 +1441,7 @@ module powerbi.visuals.samples {
                 });
 
                 values = isScalar
-                    ? d3.range(<number>minValue, <number>maxValue) 
+                    ? d3.range(<number>minValue, <number>maxValue)
                     : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue);
 
                 return <PulseChartXAxisProperties> {
@@ -1891,6 +1895,42 @@ module powerbi.visuals.samples {
         public stopAnimation() {
             this.pauseAnimation();
         }
+
+        public findNextPoint(currentSeries, currentIndex: number): PulseChartPointIndex {
+			for (var i: number = currentSeries; i < this.data.series.length; i++) {
+				var series: PulseChartSeries = this.data.series[i];
+
+				for (var j: number = (i === currentSeries) ? (currentIndex + 1) : 0; j < series.data.length; j++) {
+					if (series.data[j].popupInfo) {
+						this.handleSelection(series.data[j]);
+						return {
+							series: i,
+							index: j
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+        public findPrevPoint(currentSeries, currentIndex: number): PulseChartPointIndex {
+			for (var i: number = currentSeries; i >= 0; i--) {
+				var series: PulseChartSeries = this.data.series[i];
+
+				for (var j: number = (i === currentSeries) ? (currentIndex - 1) : series.data.length; j >= 0; j--) {
+					if (series.data[j].popupInfo) {
+						this.handleSelection(series.data[j]);
+						return {
+							series: i,
+							index: j
+						}
+					}
+				}
+			}
+
+			return null;
+		}
 
         private drawLines(data: PulseChartData): void {
             var seriesCount: number = this.animationHandler.getCurrentSeries(),
@@ -3301,6 +3341,38 @@ module powerbi.visuals.samples {
             this.disableControls();
         }
 
+		private next(): void {
+			var currentSeries: number = this.getCurrentSeries(),
+				currentIndex: number = this.getCurrentIndex();
+
+			this.stop();
+
+			var newIndex: PulseChartPointIndex = this.chart.findNextPoint(currentSeries, currentIndex);
+			if (newIndex) {
+				this.setCurrentSeries(newIndex.series);
+				this.setCurrentIndex(newIndex.index);
+				this.chart.renderChart();
+			} else {
+				this.toEnd();
+			}
+        }
+
+		private prev(): void {
+			var currentSeries: number = this.getCurrentSeries(),
+				currentIndex: number = this.getCurrentIndex();
+
+			this.stop();
+
+			var newIndex: PulseChartPointIndex = this.chart.findPrevPoint(currentSeries, currentIndex);
+			if (newIndex) {
+				this.setCurrentSeries(newIndex.series);
+				this.setCurrentIndex(newIndex.index);
+				this.chart.renderChart();
+			} else {
+				this.reset();
+			}
+        }
+
         private toEnd(): void {
             PulseAnimator.isDebug && console.log('toEnd');
 
@@ -3313,6 +3385,7 @@ module powerbi.visuals.samples {
             this.disableControls();
 
             this.chart.renderChart();
+
         }
 
         public stop(): void {
