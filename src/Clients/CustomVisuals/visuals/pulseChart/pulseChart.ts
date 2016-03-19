@@ -870,7 +870,7 @@ module powerbi.visuals.samples {
 
             var minCategoryValue = Math.min.apply(null, categoryValues), maxCategoryValue = Math.max.apply(null, categoryValues);
             settings.xAxis.dateFormat = 
-                (maxCategoryValue - minCategoryValue < (24 * 60 * 60 * 10000) 
+                (maxCategoryValue - minCategoryValue < (24 * 60 * 60 * 1000) 
                     && new Date(maxCategoryValue).getDate() === new Date(minCategoryValue).getDate()) 
                     ? PulseChartXAxisDateFormat.TimeOnly 
                     : PulseChartXAxisDateFormat.DateOnly;
