@@ -1459,62 +1459,31 @@ module powerbi.visuals.samples {
         }
 
         private resolveIntersections(xAxisProperties: PulseChartXAxisProperties[]): void {
-            var leftPoint: PulseChartPoint = null,
-                rightPoint: PulseChartPoint = null,
-                currentPoint: PulseChartPoint = null;
+            xAxisProperties.forEach(xAxisProperty => {
+                var tickWidth = this.data.widthOfXAxisLabel;
+                var scaledValues = xAxisProperty.values.map(xAxisProperty.scale);
+                var maxValue: number = Math.max.apply(null, scaledValues);
+                var minValue: number = Math.min.apply(null, scaledValues);
+                var width = maxValue - minValue;
 
-            xAxisProperties.forEach((properties: PulseChartXAxisProperties) => {
-                var scale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale> = properties.scale,
-                    length: number = properties.values.length;
-
-                for (var i = 0; i < length; i++) {
-                    var currentValue: Date | number = properties.values[i];
-
-                    currentPoint = {
-                        value: properties.values[i],
-                        x: scale(currentValue)
-                    };
-
-                    if (!leftPoint) {
-                        var leftValue: Date | number = properties.values[i - 1];
-
-                        leftPoint = {
-                            value: leftValue,
-                            x: scale(leftValue)
-                        };
-                    }
-
-                    if (this.isIntersect(leftPoint, currentPoint)) {
-                        properties.values[i] = null;
-                        rightPoint = null;
-
-                        continue;
-                    }
-
-                    if (!rightPoint && i < length - 1) {
-                        var rightValue: Date | number = properties.values[i + 1];
-
-                        rightPoint = {
-                            value: rightValue,
-                            x: scale(rightValue)
-                       };
-                    } else {
-                        leftPoint = currentPoint;
-                    }
-
-                    if (rightPoint && this.isIntersect(currentPoint, rightPoint)) {
-                        properties.values[i + 1] = null;
-                        leftPoint = currentPoint;
-                        i++;
-                    }
-
-                    rightPoint = null;
+                if(width < tickWidth) {
+                    xAxisProperty.values = [];
+                    return;
                 }
-            });
-        }
 
-        private isIntersect(leftPoint: PulseChartPoint, rightPoint: PulseChartPoint): boolean {
-            return (leftPoint.x + this.data.widthOfXAxisLabel + PulseChart.xAxisTickSpace) > rightPoint.x;
+                var maxTicks = Math.ceil((width + PulseChart.xAxisTickSpace - tickWidth) 
+                    / (this.data.widthOfXAxisLabel + PulseChart.xAxisTickSpace));
+                xAxisProperty.values = xAxisProperty.values
+                    .filter((x,i) => scaledValues[i] > minValue + tickWidth/2 && scaledValues[i] < maxValue - tickWidth / 2);
+
+                if(!xAxisProperty.values.length) {
+                    return;
+                }
+
+                var visibleTicksScale = d3.scale.linear().domain([0, maxTicks - 1]).range([0, xAxisProperty.values.length - 1]);
+
+                xAxisProperty.values = d3.range(maxTicks).map(x => xAxisProperty.values[Math.ceil(visibleTicksScale(x))]);
+            });
         }
 
         private isAutoPlay(): boolean {
@@ -1648,13 +1617,6 @@ module powerbi.visuals.samples {
                     width: this.data.widthOfXAxisLabel,
                     height: "1.3em"
                 });
-
-            var xScale = data.xScale;
-            ticksSelection.attr("display", function(d) {
-                var rect = $(this).children("rect");
-                var rectXRight = parseInt(rect.attr("width"), 10) + parseInt(rect.attr("x"), 10);
-                return xScale(d) + rectXRight > xScale.range()[1] ? "none" : "inherit";
-            });
 
             ticksUpdateSelection
                 .exit()
