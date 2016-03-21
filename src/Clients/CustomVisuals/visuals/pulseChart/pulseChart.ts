@@ -60,7 +60,7 @@ module powerbi.visuals.samples {
     }
 
     export interface PulseChartTooltipData {
-        time: string;
+        value: string;
         title: string;
         description: string;
         offsetX?: number;
@@ -176,6 +176,7 @@ module powerbi.visuals.samples {
     export interface PulseChartXAxisSettings extends PulseChartAxisSettings {
         position: XAxisPosition;
         dateFormat?: PulseChartXAxisDateFormat;
+        formatterOptions?: ValueFormatterOptions;
     }
 
     export interface PulseChartYAxisSettings extends PulseChartAxisSettings {
@@ -196,7 +197,6 @@ module powerbi.visuals.samples {
         yAxis: PulseChartYAxisSettings;
         runnerCounter: PulseChartRunnerCounterSettings;
         playback: PulseChartPlaybackSettings;
-        format?: string;
     }
 
     export interface PulseChartData {
@@ -225,7 +225,6 @@ module powerbi.visuals.samples {
 
         // yAxisProperties?: IAxisProperties;
         settings?: PulseChartSettings;
-        formatter?: IValueFormatter;
         widthOfXAxisLabel: number;
         widthOfTooltipValueLabel: number;
         heightOfTooltipDescriptionTextLine: number;
@@ -242,7 +241,6 @@ module powerbi.visuals.samples {
     interface PulseChartXAxisProperties {
         values: (Date | number)[];
         scale: D3.Scale.TimeScale;
-        formatter: IValueFormatter;
     }
 
     interface PulseChartPoint {
@@ -874,18 +872,22 @@ module powerbi.visuals.samples {
                     && new Date(maxCategoryValue).getDate() === new Date(minCategoryValue).getDate()) 
                     ? PulseChartXAxisDateFormat.TimeOnly 
                     : PulseChartXAxisDateFormat.DateOnly;
+
+            settings.xAxis.formatterOptions = { value: new Date(minCategoryValue), value2: new Date(maxCategoryValue) };
+
             if (isScalar) {
-                settings.format = ValueFormatter.getFormatString(timeStampColumn.source,
+                settings.xAxis.formatterOptions.format = ValueFormatter.getFormatString(timeStampColumn.source,
                     PulseChart.DefaultSettings.formatStringProperty);
             } else {
                 var values = dataView.categorical.categories;
                 var dateFormatString: string = values && values[0]
                     ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty)
                     : timeStampColumn.source.format;
-                settings.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
+                settings.xAxis.formatterOptions.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
             }
-            var widthOfXAxisLabel = isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetAxisTextProperties()) + 3;
-            var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.format, PulseChart.GetPopupValueTextProperties()) + 3;
+
+            var widthOfXAxisLabel = 65; //isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.xAxis.formatterOptions.format, PulseChart.GetAxisTextProperties()) + 3;
+            var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.xAxis.formatterOptions.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
             var runnerCounterFormatString = columns.RunnerCounter && visuals.valueFormatter.getFormatString(columns.RunnerCounter.source, settings.formatStringProperty);
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
@@ -1023,15 +1025,14 @@ module powerbi.visuals.samples {
 
                 if ((columns.EventTitle && columns.EventTitle.values && columns.EventTitle.values[categoryIndex]) ||
                     (columns.EventDescription && columns.EventDescription.values && columns.EventDescription.values[categoryIndex])) {
-                    var time = categoryValue;
+                    var formattedValue = categoryValue;
 
                     if (isDateTime && categoryValue) {
-                        var formatterTime = valueFormatter.create({ format: settings.format });
-                        time = formatterTime.format(categoryValue);
+                        formattedValue = valueFormatter.create({ format: settings.xAxis.formatterOptions.format }).format(categoryValue);
                     }
 
                     popupInfo = {
-                        time: time,
+                        value: formattedValue,
                         title: columns.EventTitle && columns.EventTitle.values && columns.EventTitle.values[categoryIndex],
                         description: columns.EventDescription && columns.EventDescription.values && columns.EventDescription.values[categoryIndex],
                         size: eventSize,
@@ -1302,7 +1303,7 @@ module powerbi.visuals.samples {
                 this.data.isScalar,
                 this.data.series,
                 <D3.Scale.LinearScale> this.data.xScale,
-                this.data.settings.format,
+                $.extend({}, this.data.settings.xAxis.formatterOptions),
                 this.data.settings.xAxis.dateFormat);
 
             this.data.series.forEach((series: PulseChartSeries, index: number) => {
@@ -1417,37 +1418,26 @@ module powerbi.visuals.samples {
             isScalar: boolean,
             series: PulseChartSeries[],
             originalScale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>,
-            formatString: string,
+            formatterOptions: ValueFormatterOptions,
             dateFormat: PulseChartXAxisDateFormat): D3.Svg.Axis[] {
 
             var xAxisProperties: PulseChartXAxisProperties[] = [];
 
             xAxisProperties = series.map((seriesElement: PulseChartSeries) => {
-                var formatter: IValueFormatter,
-                    scale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>,
-                    dataPoints: PulseChartDataPoint[] = seriesElement.data,
+                var dataPoints: PulseChartDataPoint[] = seriesElement.data,
                     minValue: number | Date = dataPoints[0].categoryValue,
                     maxValue: number | Date = dataPoints[dataPoints.length - 1].categoryValue,
                     minX: number = originalScale(dataPoints[0].categoryValue),
-                    maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue),
-                    values: (Date | number)[] = [];
+                    maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue);
 
-                scale = PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
-
-                formatter = valueFormatter.create({
-                    format: formatString,
-                    value: minValue,
-                    value2: maxValue
-                });
-
-                values = isScalar
+                var scale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale> = PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
+                var values: (Date | number)[] = isScalar
                     ? d3.range(<number>minValue, <number>maxValue)
                     : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue);
 
                 return <PulseChartXAxisProperties> {
                     values: values,
-                    scale: scale,
-                    formatter: formatter
+                    scale: scale
                 };
             });
 
@@ -1456,11 +1446,13 @@ module powerbi.visuals.samples {
             return xAxisProperties.map((properties: PulseChartXAxisProperties) => {
                 var values: (Date | number)[] = properties.values.filter((value: Date | number) => value !== null);
 
+                formatterOptions.tickCount = values.length;
+                var formatter = valueFormatter.create(formatterOptions)
                 return d3.svg.axis()
                     .scale(properties.scale)
                     .tickValues(values)
                     .tickFormat((value: Date) => {
-                        return properties.formatter.format(value);
+                        return formatter.format(value);
                     })
                 	.outerTickSize(0);
             });
@@ -2412,7 +2404,7 @@ module powerbi.visuals.samples {
                 .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex)
                     ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight  + 3))
                     : PulseChart.DefaultTooltipSettings.timeHeight - 3)
-                .text((d: PulseChartDataPoint) => d.popupInfo.time);
+                .text((d: PulseChartDataPoint) => d.popupInfo.value);
 
             var title = tooltipRoot.selectAll(PulseChart.TooltipTitle.selector).data(d => [d]);
             title.enter().append("text").classed(PulseChart.TooltipTitle.class, true);
