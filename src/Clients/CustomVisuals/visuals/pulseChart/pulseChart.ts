@@ -1626,7 +1626,8 @@ module powerbi.visuals.samples {
                 .style('stroke', color)
                 .style('display', this.data.settings.xAxis.show ? 'inherit' : 'none')
                 .selectAll("text")
-                .style('stroke', fontColor)
+                .style('fill', fontColor)
+                .style('stroke', 'none')
                 .attr({
                     dy: (tickRectY + 0.2) + "em"
                 });
