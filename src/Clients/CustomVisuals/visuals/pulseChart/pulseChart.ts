@@ -1774,7 +1774,7 @@ module powerbi.visuals.samples {
                         this.moveAnimationDot(d.data[0]);
                         return this.lineX([]);
                     } else {
-                        var dataReduced: PulseChartDataPoint[] = d.data.slice(0, flooredStart);
+                        var dataReduced: PulseChartDataPoint[] = d.data.slice(0, flooredStart + 1);
                         this.moveAnimationDot(dataReduced[dataReduced.length - 1]);
                         return this.lineX(dataReduced);
                     }
@@ -1859,8 +1859,26 @@ module powerbi.visuals.samples {
             for (var i: number = position.series; i < this.data.series.length; i++) {
                 var series: PulseChartSeries = this.data.series[i];
 
-                for (var j: number = (i === position.series) ? (position.index + 1) : 0; j < series.data.length; j++) {
-                    if (series.data[j].popupInfo) {
+                for (var j: number = (i === position.series) ? Math.floor(position.index + 1) : 0; j < series.data.length; j++) {
+                    if (series.data[j] && series.data[j].popupInfo) {
+                        this.handleSelection(series.data[j]);
+                        return {
+                            series: i,
+                            index: j
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public findPrevPoint(position: PulseChartAnimationPosition): PulseChartAnimationPosition {
+            for (var i: number = position.series; i >= 0; i--) {
+                var series: PulseChartSeries = this.data.series[i];
+
+                for (var j: number = (i === position.series) ? Math.ceil(position.index - 1) : series.data.length; j >= 0; j--) {
+                    if (series.data[j] && series.data[j].popupInfo) {
                         this.handleSelection(series.data[j]);
                         return {
                             series: i,
@@ -1880,24 +1898,6 @@ module powerbi.visuals.samples {
         public isAnimationIndexLast(position: PulseChartAnimationPosition): boolean {
             var series: PulseChartSeries = this.data.series[position.series];
 			return (position.index >= (series.data.length - 1));
-        }
-
-        public findPrevPoint(position: PulseChartAnimationPosition): PulseChartAnimationPosition {
-            for (var i: number = position.series; i >= 0; i--) {
-                var series: PulseChartSeries = this.data.series[i];
-
-                for (var j: number = (i === position.series) ? (position.index - 1) : series.data.length; j >= 0; j--) {
-                    if (series.data[j].popupInfo) {
-                        this.handleSelection(series.data[j]);
-                        return {
-                            series: i,
-                            index: j
-                        }
-                    }
-                }
-            }
-
-            return null;
         }
 
         private drawLines(data: PulseChartData): void {
@@ -3010,13 +3010,17 @@ module powerbi.visuals.samples {
         private animationPause: D3.Selection;
         private animationReset: D3.Selection;
         private animationToEnd: D3.Selection;
+        private animationPrev: D3.Selection;
+        private animationNext: D3.Selection;
         private runnerCounter: D3.Selection;
         private runnerCounterText: D3.Selection;
 
         private static AnimationPlay: ClassAndSelector = createClassAndSelector('animationPlay');
         private static AnimationPause: ClassAndSelector = createClassAndSelector('animationPause');
-        private static animationReset: ClassAndSelector = createClassAndSelector('animationReset');
+        private static AnimationReset: ClassAndSelector = createClassAndSelector('animationReset');
         private static AnimationToEnd: ClassAndSelector = createClassAndSelector('animationToEnd');
+        private static AnimationPrev: ClassAndSelector = createClassAndSelector('animationPrev');
+        private static AnimationNext: ClassAndSelector = createClassAndSelector('animationNext');
         private static RunnerCounter: ClassAndSelector = createClassAndSelector('runnerCounter');
         private animatorState: PulseAnimatorStates;
 
@@ -3077,7 +3081,7 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 17h-3v-10h3v10zm5-10h-3v10h3v-10z");
 
-            this.animationReset = container.append('g').classed(PulseAnimator.animationReset.class, true);
+            this.animationReset = container.append('g').classed(PulseAnimator.AnimationReset.class, true);
             this.animationReset
                 .append("circle")
                 .attr("cx", 12)
@@ -3087,7 +3091,35 @@ module powerbi.visuals.samples {
 
             this.animationReset
                 .append("path")
-                .attr("d", "M16.434 20.467c.552-.204 1.077-.462 1.569-.771l1.189 1.618c-.706.457-1.47.829-2.278 1.107l-.48-1.954zm-10.105-3.424l-1.2 1.775c.421.557.904 1.062 1.426 1.526l1.082-1.709c-.497-.475-.938-1.009-1.308-1.592zm-1.176-6.043c.711-3.972 4.174-7 8.347-7 4.687 0 8.5 3.813 8.5 8.5 0 2.313-.932 4.411-2.436 5.945l1.197 1.627c1.993-1.911 3.239-4.594 3.239-7.572 0-5.798-4.703-10.5-10.5-10.5-5.288 0-9.649 3.914-10.377 9h-3.123l4 5.917 4-5.917h-2.847zm5.745 9.574c-.582-.189-1.139-.429-1.658-.733l-1.065 1.683c.688.409 1.424.739 2.201.983l.522-1.933zm3.592.364c-.839.097-1.035.066-1.623.021l-.533 1.972c.946.105 1.661.092 2.636-.045l-.48-1.948z");
+                .attr("d", "M22 12c0 5.514-4.486 10-10 10s-10-4.486-10-10 4.486-10 10-10 10 4.486 10 10zm-22 0c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm13 0l5-4v8l-5-4zm-5 0l5-4v8l-5-4zm-2 4h2v-8h-2v8z");
+
+
+			/* Prev */
+            this.animationPrev = container.append('g').classed(PulseAnimator.AnimationPrev.class, true);
+            this.animationPrev
+                .append("circle")
+                .attr("cx", 12)
+                .attr("cy", 12)
+                .attr("r", 10)
+                .attr("fill", "transparent");
+
+            this.animationPrev
+                .append("path")
+                .attr("d", "M9.5 12l7.5-4.5v9l-7.5-4.5zm-4.5 0l6.5 4v-1.634l-3.943-2.366 3.943-2.366v-1.634l-6.5 4zm17 0c0 5.514-4.486 10-10 10s-10-4.486-10-10 4.486-10 10-10 10 4.486 10 10zm-22 0c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12z");
+
+			/* Next */
+            this.animationNext = container.append('g').classed(PulseAnimator.AnimationNext.class, true);
+            this.animationNext
+                .append("circle")
+                .attr("cx", 12)
+                .attr("cy", 12)
+                .attr("r", 10)
+                .attr("fill", "transparent");
+
+            this.animationNext
+                .append("path")
+                .attr("d", "M7 16.5v-9l7.5 4.5-7.5 4.5zm5.5-8.5v1.634l3.943 2.366-3.943 2.366v1.634l6.5-4-6.5-4zm-.5-6c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12z")
+				.attr("rotate", 180);
 
             /* ToEnd */
             this.animationToEnd = container.append('g').classed(PulseAnimator.AnimationToEnd.class, true);
@@ -3102,7 +3134,7 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 16v-8l5 4-5 4zm5 0v-8l5 4-5 4zm7-8h-2v8h2v-8z");
 
-            this.runnerCounter = container.append('g').classed(PulseAnimator.RunnerCounter.class, true);
+	        this.runnerCounter = container.append('g').classed(PulseAnimator.RunnerCounter.class, true);
             this.runnerCounterText = this.runnerCounter.append('text');
             this.runnerCounterText.style('alignment-baseline', "hanging");
             this.setControlsColor(PulseAnimator.DefaultControlsColor);
@@ -3153,9 +3185,19 @@ module powerbi.visuals.samples {
                 .attr('transform', SVGUtil.translate(60, 0))
                 .on("click", () => this.reset());
 
-            this.animationToEnd
+            this.animationPrev
                 .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(90, 0))
+                .on("click", () => this.prev());
+
+            this.animationNext
+                .attr("fill", this.color)
+                .attr('transform', SVGUtil.translate(120, 0))
+                .on("click", () => this.next());
+
+            this.animationToEnd
+                .attr("fill", this.color)
+                .attr('transform', SVGUtil.translate(150, 0))
                 .on("click", () => this.isAnimated() && void this.toEnd());
 
             this.runnerCounter
@@ -3184,7 +3226,6 @@ module powerbi.visuals.samples {
             }
         }
 
-
         private disableControls(): void {
             PulseAnimator.setControlVisiblity(this.animationReset, true);
             PulseAnimator.setControlVisiblity(this.animationToEnd, true);
@@ -3193,16 +3234,27 @@ module powerbi.visuals.samples {
                 case PulseAnimatorStates.Play:
                     PulseAnimator.setControlVisiblity(this.animationPlay, false);
 
+                    PulseAnimator.setControlVisiblity(this.animationPrev, true);
+                    PulseAnimator.setControlVisiblity(this.animationNext, true);
+
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
                     PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
+
+                    PulseAnimator.setControlVisiblity(this.animationPrev, true);
+                    PulseAnimator.setControlVisiblity(this.animationNext, true);
+
                     PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Stopped:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
+
+                    PulseAnimator.setControlVisiblity(this.animationPrev, true);
+                    PulseAnimator.setControlVisiblity(this.animationNext, true);
+
                     PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
@@ -3210,11 +3262,17 @@ module powerbi.visuals.samples {
                 case PulseAnimatorStates.Ready:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
 
+                    PulseAnimator.setControlVisiblity(this.animationPrev, false);
+                    PulseAnimator.setControlVisiblity(this.animationNext, false);
+
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
                     PulseAnimator.setControlVisiblity(this.runnerCounter, false, true);
                     break;
                 default:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
+
+                    PulseAnimator.setControlVisiblity(this.animationPrev, false);
+                    PulseAnimator.setControlVisiblity(this.animationNext, false);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
                     PulseAnimator.setControlVisiblity(this.runnerCounter, false, true);
@@ -3341,6 +3399,10 @@ module powerbi.visuals.samples {
         }
 
         private next(): void {
+            if (!this.isAnimated()) {
+                return;
+            }
+
             this.stop();
             var newIndex: PulseChartAnimationPosition = this.chart.findNextPoint(this.getPosition());
             if (newIndex) {
@@ -3352,6 +3414,10 @@ module powerbi.visuals.samples {
         }
 
         private prev(): void {
+            if (!this.isAnimated()) {
+                return;
+            }
+
             this.stop();
             var newIndex: PulseChartAnimationPosition = this.chart.findPrevPoint(this.getPosition());
             if (newIndex) {
