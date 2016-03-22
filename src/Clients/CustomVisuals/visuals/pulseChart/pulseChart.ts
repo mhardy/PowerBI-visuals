@@ -45,7 +45,6 @@ module powerbi.visuals.samples {
     export interface TooltipSettings {
         dataPointColor: string;
         marginTop: number;
-        height: number;
         timeHeight: number;
     }
 
@@ -90,14 +89,16 @@ module powerbi.visuals.samples {
         position?: LegendPosition;
     }
 
-    export interface PulseChartPopup {
+    export interface PulseChartPopupSettings {
         alwaysOnTop: boolean;
         showType: PulseChartPopupShow;
         width: number;
+        height: number;
         color: string;
         fontSize: number;
         fontColor: string;
         showTime: boolean;
+        showTitle: boolean;
         timeColor: string;
         timeFill: string;
     }
@@ -113,7 +114,7 @@ module powerbi.visuals.samples {
     export function createEnumTypeFromEnum(type: any): IEnumType {
         var even: any = false;
         return createEnumType(Object.keys(type)
-            .filter((key,i) => (i % 2 == even && type[key] === key && !void(even = !even)) || i % 2 != even)
+            .filter((key,i) => (i % 2 === even && type[key] === key && !void(even === !even)) || i % 2 !== even)
             .map(x => <IEnumMember>{ value: x, displayName: x }));
     }
 
@@ -191,7 +192,7 @@ module powerbi.visuals.samples {
         legend?: PulseChartLegend;
         colors?: IColorPalette;
         series: PulseChartSeriesSetting;
-        popup: PulseChartPopup;
+        popup: PulseChartPopupSettings;
         gaps: PulseChartGapsSettings;
         xAxis: PulseChartXAxisSettings;
         yAxis: PulseChartYAxisSettings;
@@ -256,6 +257,13 @@ module powerbi.visuals.samples {
         EventDescription?: T;
         EventSize?: T;
         RunnerCounter?: T;
+    }
+
+    export interface PulseChartElementDimensions {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
     }
 
     export class PulseChart implements IVisual {
@@ -431,6 +439,12 @@ module powerbi.visuals.samples {
                                 numeric: true
                             }
                         },
+                        height: {
+                            displayName: 'Height',
+                            type: {
+                                numeric: true
+                            }
+                        },
                         color: {
                             displayName: data.createDisplayNameGetter('Visual_Fill'),
                             type: { fill: { solid: { color: true } } }
@@ -445,6 +459,10 @@ module powerbi.visuals.samples {
                         },
                         showTime: {
                             displayName: 'Show time',
+                            type: { bool: true }
+                        },
+                        showTitle: {
+                            displayName: 'Show title',
                             type: { bool: true }
                         },
                         timeColor: {
@@ -605,37 +623,37 @@ module powerbi.visuals.samples {
             return {
                 text: text || "",
                 fontFamily: "Segoe UI,Tahoma,Verdana,Geneva,sans-serif",
-                fontSize:  fontSizeValue + "px",
+                fontSize: fontSizeValue + "px",
                 fontSizeValue: fontSizeValue
-            }
+            };
         }
 
         private static GetPopupValueTextProperties(text?: string, fontSizeValue = 12): TextProperties {
             return {
                 text: text || "",
                 fontFamily: "sans-serif",
-                fontSize:  fontSizeValue +"px",
+                fontSize: fontSizeValue + "px",
                 fontSizeValue: fontSizeValue
-            }
+            };
         }
 
          private static GetPopupTitleTextProperties(text?: string, fontSizeValue = 12): TextProperties {
-            return {
-                text: text || "",
-                fontFamily: "sans-serif",
-                fontWeight: "bold",
-                fontSize:  fontSizeValue + "px",
-                fontSizeValue: fontSizeValue
-            }
+             return {
+                 text: text || "",
+                 fontFamily: "sans-serif",
+                 fontWeight: "bold",
+                 fontSize: fontSizeValue + "px",
+                 fontSizeValue: fontSizeValue
+             };
         }
 
         private static GetPopupDescriptionTextProperties(text?: string, fontSizeValue = 12): TextProperties {
             return {
                 text: text || "",
                 fontFamily: "sans-serif",
-                fontSize:  fontSizeValue + "px",
+                fontSize: fontSizeValue + "px",
                 fontSizeValue: fontSizeValue
-            }
+            };
         }
 
         public static GetRunnerCounterTextProperties(text?: string, fontSizeValue = 12): TextProperties {
@@ -646,7 +664,7 @@ module powerbi.visuals.samples {
             };
         }
 
-        public static ConvertTextPropertiesToStyle(textProperties: TextProperties) : Object {
+        public static ConvertTextPropertiesToStyle(textProperties: TextProperties): Object {
             return {
                  'font-family': textProperties.fontFamily,
                  'font-weight': textProperties.fontWeight,
@@ -660,10 +678,10 @@ module powerbi.visuals.samples {
                 case PulseChartXAxisDateFormat.DateOnly: return dateFormat;
                 case PulseChartXAxisDateFormat.TimeOnly: return "H:mm";
                 default: return "";
-            }
+            };
         }
 
-        private static GetFullWidthOfDateFormat(dateFormat: string, textProperties: TextProperties) : number {
+        private static GetFullWidthOfDateFormat(dateFormat: string, textProperties: TextProperties): number {
             textProperties.text = valueFormatter.create({ format: dateFormat }).format(new Date(2000,10,20,20,20,20));
             return TextMeasurementService.measureSvgTextWidth(textProperties);
         }
@@ -674,10 +692,12 @@ module powerbi.visuals.samples {
                 alwaysOnTop: false,
                 showType: PulseChartPopupShow.Selected,
                 width: 100,
+                height: 100,
                 color: "#808181",
                 fontSize: 10,
                 fontColor: 'white',
                 showTime: true,
+                showTitle: true,
                 timeColor: 'white',
                 timeFill: '#010101',
             },
@@ -766,7 +786,6 @@ module powerbi.visuals.samples {
         private static DefaultTooltipSettings: TooltipSettings = {
             dataPointColor: "#808181",
             marginTop: 20,
-            height: 64,
             timeHeight: 15,
         };
 
@@ -1892,12 +1911,12 @@ module powerbi.visuals.samples {
         }
 
         public isAnimationSeriesLast(position: PulseChartAnimationPosition): boolean {
-			return (position.series >= (this.data.series.length - 1));
+            return (position.series >= (this.data.series.length - 1));
         }
 
         public isAnimationIndexLast(position: PulseChartAnimationPosition): boolean {
             var series: PulseChartSeries = this.data.series[position.series];
-			return (position.index >= (series.data.length - 1));
+            return (position.index >= (series.data.length - 1));
         }
 
         private drawLines(data: PulseChartData): void {
@@ -2239,13 +2258,9 @@ module powerbi.visuals.samples {
 
             var marginTop: number = PulseChart.DefaultTooltipSettings.marginTop;
             var width: number = this.data.settings.popup.width;
-            var height: number = PulseChart.DefaultTooltipSettings.height;
+            var height: number = this.data.settings.popup.height;
 
             var topShift: number = 20;
-            /*
-            var durationTooltip: number = 1000;
-            var durationLine: number = 700;*/
-
             var tooltipShiftY = (y: number, groupIndex: number) => this.isHigherMiddle(y, groupIndex) ? (-1 * marginTop + topShift) : this.size.height + marginTop;
 
             var tooltipRoot: D3.UpdateSelection = rootSelection.select(nodeParent.selector).selectAll(node.selector)
@@ -2265,10 +2280,6 @@ module powerbi.visuals.samples {
                     d.popupInfo.offsetX = Math.min(this.viewport.width - this.margin.right - width, Math.max(-this.margin.left, x)) - x;
                     return SVGUtil.translate(x + d.popupInfo.offsetX, y);
                 });
-                /*.style("opacity", 0)
-                .transition()
-                .duration(durationTooltip)
-                .style("opacity", 1);*/
 
             var tooltipRect = tooltipRoot.selectAll(PulseChart.TooltipRect.selector).data(d => [d]);
             tooltipRect.enter().append("path").classed(PulseChart.TooltipRect.class, true);
@@ -2326,20 +2337,6 @@ module powerbi.visuals.samples {
                 .style('fill', this.data.settings.popup.color)
                 .style('stroke', this.data.settings.popup.color)
                 .style('stroke-width', "1px")
-                /*.attr('d', (d: PulseChartDataPoint) => {
-                    var path = [
-                        {
-                            "x": width/2 - d.popupInfo.offsetX,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex), //start
-                        },
-                        {
-                            "x": width/2 - d.popupInfo.offsetX,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex) ? yScales[d.groupIndex](d.y) + tooltipShiftY(d.y, d.groupIndex) : yScales[d.groupIndex](d.y) - tooltipShiftY(d.y, d.groupIndex),
-                        }];
-                    return line(path);
-                })
-                .transition()
-                .duration(durationLine)*/
                 .attr('d', (d: PulseChartDataPoint) => {
                     var path = [
                         {
@@ -2355,78 +2352,111 @@ module powerbi.visuals.samples {
                     return line(path);
                 });
 
-            var timeRect = tooltipRoot.selectAll(PulseChart.TooltipTimeRect.selector).data(d => [d]);
-            var timeDisplayStyle = { "display": this.data.settings.popup.showTime ? "" : "none" };
-            timeRect.enter().append("path").classed(PulseChart.TooltipTimeRect.class, true);
-            timeRect
-                .style("fill", this.data.settings.popup.timeFill)
-                .style(timeDisplayStyle)
-                .attr('d', (d: PulseChartDataPoint) => {
-                    var path = [
-                        {
-                            "x": width - this.data.widthOfTooltipValueLabel - 2,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height)) : 0,
-                        },
-                        {
-                            "x": width - this.data.widthOfTooltipValueLabel  -2,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex)
-                                ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight))
-                                : PulseChart.DefaultTooltipSettings.timeHeight,
-                        },
-                        {
-                            "x": width - 2,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex)
-                                ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight))
-                                : PulseChart.DefaultTooltipSettings.timeHeight,
-                        },
-                        {
-                            "x": width - 2,
-                            "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height)) : 0,
+            var isShowTime: boolean = this.data.settings.popup.showTime;
+            var isShowTitle: boolean = this.data.settings.popup.showTitle;
+
+            if (isShowTime) {
+                var timeRect = tooltipRoot.selectAll(PulseChart.TooltipTimeRect.selector).data(d => [d]);
+                var timeDisplayStyle = { "display": isShowTime ? "" : "none" };
+                timeRect.enter().append("path").classed(PulseChart.TooltipTimeRect.class, true);
+                timeRect
+                    .style("fill", this.data.settings.popup.timeFill)
+                    .style(timeDisplayStyle)
+                    .attr('d', (d: PulseChartDataPoint) => {
+                        var path = [
+                            {
+                                "x": width - this.data.widthOfTooltipValueLabel - 2,
+                                "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height)) : 0,
+                            },
+                            {
+                                "x": width - this.data.widthOfTooltipValueLabel  -2,
+                                "y": this.isHigherMiddle(d.y, d.groupIndex)
+                                    ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight))
+                                    : PulseChart.DefaultTooltipSettings.timeHeight,
+                            },
+                            {
+                                "x": width - 2,
+                                "y": this.isHigherMiddle(d.y, d.groupIndex)
+                                    ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight))
+                                    : PulseChart.DefaultTooltipSettings.timeHeight,
+                            },
+                            {
+                                "x": width - 2,
+                                "y": this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height)) : 0,
+                            }
+                        ];
+                        return line(path);
+                    });
+
+                var time = tooltipRoot.selectAll(PulseChart.TooltipTime.selector).data(d => [d]);
+                time.enter().append("text").classed(PulseChart.TooltipTime.class, true);
+                time
+                    .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupValueTextProperties()))
+                    .style(timeDisplayStyle)
+                    .style("fill", this.data.settings.popup.timeColor)
+                    .attr("x", (d: PulseChartDataPoint) => width - this.data.widthOfTooltipValueLabel)
+                    .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex)
+                        ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight  + 3))
+                        : PulseChart.DefaultTooltipSettings.timeHeight - 3)
+                    .text((d: PulseChartDataPoint) => d.popupInfo.value);
+            }
+
+            if (isShowTitle) {
+                var title = tooltipRoot.selectAll(PulseChart.TooltipTitle.selector).data(d => [d]);
+                title.enter().append("text").classed(PulseChart.TooltipTitle.class, true);
+                title
+                    .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupTitleTextProperties()))
+                    .style("fill", this.data.settings.popup.fontColor)
+                    //.attr("stroke", "white")
+                    .attr("x", (d: PulseChartDataPoint) => PulseChart.PopupTextPadding)
+                    .attr("y", (d: PulseChartDataPoint) => (this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 12)) : 12) + PulseChart.PopupTextPadding)
+                    .text((d: PulseChartDataPoint) => {
+                        if (!d.popupInfo) {
+                            return "";
                         }
-                    ];
-                    return line(path);
-                });
 
-            var time = tooltipRoot.selectAll(PulseChart.TooltipTime.selector).data(d => [d]);
-            time.enter().append("text").classed(PulseChart.TooltipTime.class, true);
-            time
-                .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupValueTextProperties()))
-                .style(timeDisplayStyle)
-                .style("fill", this.data.settings.popup.timeColor)
-                .attr("x", (d: PulseChartDataPoint) => width - this.data.widthOfTooltipValueLabel)
-                .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex)
-                    ? (-1 * (marginTop + height - PulseChart.DefaultTooltipSettings.timeHeight  + 3))
-                    : PulseChart.DefaultTooltipSettings.timeHeight - 3)
-                .text((d: PulseChartDataPoint) => d.popupInfo.value);
+                        return TextMeasurementService.getTailoredTextOrDefault(PulseChart.GetPopupTitleTextProperties(d.popupInfo.title),
+                            width - 2 - (isShowTime ? this.data.widthOfTooltipValueLabel : 0) - PulseChart.PopupTextPadding * 2);
+                    });
+            }
 
-            var title = tooltipRoot.selectAll(PulseChart.TooltipTitle.selector).data(d => [d]);
-            title.enter().append("text").classed(PulseChart.TooltipTitle.class, true);
-            title
-                .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupTitleTextProperties()))
-                .style("fill", this.data.settings.popup.fontColor)
-                //.attr("stroke", "white")
-                .attr("x", (d: PulseChartDataPoint) => PulseChart.PopupTextPadding)
-                .attr("y", (d: PulseChartDataPoint) => (this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - 12)) : 12) + PulseChart.PopupTextPadding)
-                .text((d: PulseChartDataPoint) => {
-                    if (!d.popupInfo) {
-                        return "";
-                    }
+            var getDescriptionDimenstions = (d: PulseChartDataPoint): PulseChartElementDimensions => {
+                var shiftY: number = PulseChart.PopupTextPadding + this.data.settings.popup.fontSize;
 
-                    return powerbi.TextMeasurementService.getTailoredTextOrDefault(PulseChart.GetPopupTitleTextProperties(d.popupInfo.title),
-                        width - 2 - (this.data.settings.popup.showTime ? this.data.widthOfTooltipValueLabel : 0) - PulseChart.PopupTextPadding * 2);
-                });
+                var descriptionYOffset: number = shiftY + PulseChart.DefaultTooltipSettings.timeHeight;
+                if (d.popupInfo) {
+                    shiftY = ((isShowTitle && d.popupInfo.title) || (isShowTime && d.popupInfo.value)) ? descriptionYOffset: shiftY;
+                }
 
-            var descriptionYOffset = PulseChart.DefaultTooltipSettings.timeHeight + this.data.settings.popup.fontSize + PulseChart.PopupTextPadding;
+                return {
+                    y: this.isHigherMiddle(d.y, d.groupIndex)
+                                    ? (-1 * (marginTop + height - shiftY))
+                                    : shiftY,
+                    x: PulseChart.PopupTextPadding,
+                    width: width - PulseChart.PopupTextPadding,
+                    height: height - shiftY,
+                };
+            };
+
             var description = tooltipRoot.selectAll(PulseChart.TooltipDescription.selector).data(d => [d]);
             description.enter().append("text").classed(PulseChart.TooltipDescription.class, true);
             description
                 .style(PulseChart.ConvertTextPropertiesToStyle(PulseChart.GetPopupDescriptionTextProperties(null, this.data.settings.popup.fontSize)))
                 .style("fill", this.data.settings.popup.fontColor)
-                .attr("y", 0)
                 .text((d: PulseChartDataPoint) => d.popupInfo && d.popupInfo.description)
-                .call(d => d.forEach(x => x[0] &&
-                    powerbi.TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - PulseChart.DefaultTooltipSettings.timeHeight - PulseChart.PopupTextPadding * 2)))
-                .attr("y", (d: PulseChartDataPoint) => this.isHigherMiddle(d.y, d.groupIndex) ? (-1 * (marginTop + height - descriptionYOffset)) : descriptionYOffset);
+                //.call(d => d.forEach(x => x[0] &&
+                //    TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - PulseChart.DefaultTooltipSettings.timeHeight - PulseChart.PopupTextPadding * 2)))
+                //    TextMeasurementService.wordBreak(x[0], width - 2 - PulseChart.PopupTextPadding * 2, height - PulseChart.DefaultTooltipSettings.timeHeight - PulseChart.PopupTextPadding * 2)))
+                .attr("y", function(d: PulseChartDataPoint) {
+                    var descriptionDimenstions: PulseChartElementDimensions = getDescriptionDimenstions(d);
+                    var el: SVGTextElement = <any>d3.select(this)[0][0];
+                    TextMeasurementService.wordBreak(el, descriptionDimenstions.width, descriptionDimenstions.height);
+                    return 0;
+                })
+                .attr("transform", function(d: PulseChartDataPoint) {
+                    var descriptionDimenstions: PulseChartElementDimensions = getDescriptionDimenstions(d);
+                    return SVGUtil.translate(0, descriptionDimenstions.y);
+                });
             description.selectAll("tspan").attr("x", PulseChart.PopupTextPadding);
 
             tooltipRoot
@@ -2482,7 +2512,7 @@ module powerbi.visuals.samples {
             return settings;
         }
 
-        private static getPopupSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartPopup {
+        private static getPopupSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartPopupSettings {
             var alwaysOnTop: boolean =  DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["popup"]["alwaysOnTop"],
@@ -2497,6 +2527,11 @@ module powerbi.visuals.samples {
                 objects,
                 PulseChart.Properties["popup"]["width"],
                 PulseChart.DefaultSettings.popup.width)));
+
+            var height: number = Math.max(1, Math.min(200, DataViewObjects.getValue<number>(
+                objects,
+                PulseChart.Properties["popup"]["height"],
+                PulseChart.DefaultSettings.popup.height)));
 
             var colorHelper = new ColorHelper(
                 colors,
@@ -2522,6 +2557,11 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["popup"]["showTime"],
                 PulseChart.DefaultSettings.popup.showTime);
 
+            var showTitle =  DataViewObjects.getValue<boolean>(
+                objects,
+                PulseChart.Properties["popup"]["showTitle"],
+                PulseChart.DefaultSettings.popup.showTitle);
+
             var timeColorHelper = new ColorHelper(
                 colors,
                 PulseChart.Properties["popup"]["timeColor"],
@@ -2539,10 +2579,12 @@ module powerbi.visuals.samples {
                 alwaysOnTop: alwaysOnTop,
                 showType: showType,
                 width: width,
+                height: height,
                 color: color,
                 fontSize: fontSize,
                 fontColor: fontColor,
                 showTime: showTime,
+                showTitle: showTitle,
                 timeColor: timeColor,
                 timeFill: timeFill,
             };
@@ -2849,7 +2891,7 @@ module powerbi.visuals.samples {
         }
 
         private readPopupInstance(enumeration: ObjectEnumerationBuilder): void {
-            var popupSettings: PulseChartPopup = this.data.settings.popup;
+            var popupSettings: PulseChartPopupSettings = this.data.settings.popup;
 
             if (!popupSettings) {
                 popupSettings = PulseChart.DefaultSettings.popup;
@@ -2863,10 +2905,12 @@ module powerbi.visuals.samples {
                     alwaysOnTop: popupSettings.alwaysOnTop,
                     showType: popupSettings.showType,
                     width: popupSettings.width,
+                    height: popupSettings.height,
                     color: popupSettings.color,
                     fontColor: popupSettings.fontColor,
                     fontSize: popupSettings.fontSize,
                     showTime: popupSettings.showTime,
+                    showTitle: popupSettings.showTitle,
                     timeColor: popupSettings.timeColor,
                     timeFill: popupSettings.timeFill,
                 }
@@ -3372,7 +3416,7 @@ module powerbi.visuals.samples {
             this.pause();
             var position: PulseChartAnimationPosition = this.getPosition();
 
-            if (this.chart.isAnimationSeriesLast(this.getPosition())) {
+            if (this.chart.isAnimationSeriesLast(position)) {
 				PulseAnimator.isDebug && console.log('end of series');
                 this.setDefaultValues();
                 this.chart.clearSelection();
