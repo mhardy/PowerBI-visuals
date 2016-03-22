@@ -1432,10 +1432,10 @@ module powerbi.visuals.samples {
 
             this.resolveIntersections(xAxisProperties);
 
+            formatterOptions.tickCount = xAxisProperties.length && xAxisProperties.map(x => x.values.length).reduce((a,b) => a + b);
             xAxisProperties.forEach((properties: PulseChartXAxisProperties) => {
                 var values: (Date | number)[] = properties.values.filter((value: Date | number) => value !== null);
 
-                formatterOptions.tickCount = values.length;
                 var formatter = valueFormatter.create(formatterOptions);
                 properties.axis = d3.svg.axis()
                     .scale(properties.scale)
