@@ -677,7 +677,7 @@ module powerbi.visuals.samples {
                 alwaysOnTop: false,
                 showType: PulseChartPopupShow.Selected,
                 width: 100,
-                height: 100,
+                height: 80,
                 color: "#808181",
                 fontSize: 10,
                 fontColor: 'white',
@@ -1620,7 +1620,7 @@ module powerbi.visuals.samples {
                 var rotateCoeff = rotate ? Math.abs(Math.sin(PulseChart.AxisTickRotateAngle * Math.PI / 180)) : 0;
                 var dy = tickRectY + 3;
                 selection.selectAll("text")
-                    .attr('transform', function() { 
+                    .attr('transform', function() {
                         return `translate(0, ${(dy + 9 + ($(this).width()/2) * rotateCoeff)}) rotate(${rotate ? PulseChart.AxisTickRotateAngle : 0})`;
                     })
                     .style('fill', fontColor)
@@ -2812,8 +2812,8 @@ module powerbi.visuals.samples {
             this.yAxis.selectAll("*").remove();
             this.xAxis.selectAll("*").remove();
             this.chart.selectAll("*").remove();
-            this.dots.selectAll("*").remove();
-            this.animationDot.selectAll("*").remove();
+            this.dots.selectAll(PulseChart.Dot.selector).remove();
+            this.hideAnimationDot();
         }
 
         public clearChart(): void {
@@ -3313,12 +3313,12 @@ module powerbi.visuals.samples {
             if (this.isAnimated()) {
                 this.reset();
             }
-            this.container.attr('display', 'none');
+            this.container.style('display', 'none');
         }
 
         public show(): void {
             this.disableControls();
-            this.container.attr('display', 'block');
+            this.container.style('display', 'inline');
         }
 
         public setRunnerCounterValue(dataPoint?: PulseChartDataPoint): void {
