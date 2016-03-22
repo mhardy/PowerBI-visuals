@@ -230,25 +230,25 @@ module powerbi.visuals.samples {
         heightOfTooltipDescriptionTextLine: number;
     }
 
-    interface PulseChartProperty {
+    export interface PulseChartProperty {
         [propertyName: string]: DataViewObjectPropertyIdentifier;
     }
 
-    interface PulseChartProperties {
+    export interface PulseChartProperties {
         [objectName: string]: PulseChartProperty;
     }
 
-    interface PulseChartXAxisProperties {
+    export interface PulseChartXAxisProperties {
         values: (Date | number)[];
         scale: D3.Scale.TimeScale;
     }
 
-    interface PulseChartPoint {
+    export interface PulseChartPoint {
         x: number;
         value: Date | number;
     }
 
-    interface PulseChartDataRoles<T> {
+    export interface PulseChartDataRoles<T> {
         Timestamp?: T;
         Category?: T;
         Value?: T;
@@ -1930,6 +1930,7 @@ module powerbi.visuals.samples {
             this.animationDot
                 .attr('display', 'inline')
                 .attr("fill", this.data.settings.dots.color)
+                .attr("opacity", this.getDotTransparency())
                 .attr("r", size);
         }
 
@@ -2058,6 +2059,15 @@ module powerbi.visuals.samples {
             return PulseChart.DefaultSettings.playback.pauseDuration * 1000;
         }
 
+        private getDotTransparency(): number {
+            if (this.data &&
+                this.data.settings &&
+                this.data.settings.dots) {
+                    return this.data.settings.dots.transparency / 100;
+                }
+            return 1;
+        }
+
         private drawDots(data: PulseChartData): void {
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>data.yScales,
@@ -2067,13 +2077,12 @@ module powerbi.visuals.samples {
                 sm: SelectionManager = this.selectionManager,
                 dotColor: string = this.data.settings.dots.color,
                 dotSize: number = this.data.settings.dots.size,
-                transparency: number = this.data.settings.dots.transparency,
+                dotTransparency: number = this.getDotTransparency(),
                 isAnimated: boolean = this.animationHandler.isAnimated(),
                 position: PulseChartAnimationPosition = this.animationHandler.getPosition();
 
            var selection: D3.UpdateSelection = rootSelection.filter((d, index) => !isAnimated || index <= position.series)
                 .select(nodeParent.selector)
-                .attr("opacity", transparency / 100)
                 .selectAll(node.selector)
                 .data((d: PulseChartSeries, seriesIndex: number) => {
                     return _.filter(d.data, (value: PulseChartDataPoint, valueIndex: number): boolean => {
@@ -2094,6 +2103,7 @@ module powerbi.visuals.samples {
                 .attr("cy", (d: PulseChartDataPoint) => yScales[d.groupIndex](d.y))
                 .attr("r", (d: PulseChartDataPoint) => d.eventSize || dotSize)
                 .style("fill", dotColor)
+                .attr("opacity", dotTransparency)
                 .style("cursor", "pointer")
                 /*.on("mouseover", function(d) {
                     d3.select(this)
