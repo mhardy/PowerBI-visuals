@@ -322,31 +322,13 @@ module powerbi.visuals.samples {
             dataViewMappings: [{
                 conditions: <any>[
                     <PulseChartDataRoles<NumberRange>> {
-                        Timestamp: { min: 1, max: 1 },
-                        Value: { max: 0 },
-                        Category: { max: 0 },
-                        EventTitle: { max: 0 },
-                        EventDescription: { max: 0 },
-                        EventSize: { max: 0 },
-                        RunnerCounter: { min: 0, max: 1 },
-                    },
-                    <PulseChartDataRoles<NumberRange>> {
-                        Timestamp: { min: 1, max: 1 },
-                        Value: { min: 1, max: 1 },
-                        Category: { max: 0 },
-                        EventTitle: { max: 0 },
-                        EventDescription: { max: 0 },
-                        EventSize: { max: 0 },
-                        RunnerCounter: { min: 0, max: 1 },
-                    },
-                    <PulseChartDataRoles<NumberRange>> {
-                        Timestamp: { min: 1, max: 1 },
-                        Value: { min: 1, max: 1 },
+                        Timestamp: { max: 1 },
+                        Value: { max: 1 },
                         Category: { max: 1 },
                         EventTitle: { max: 1 },
                         EventDescription: { max: 1 },
                         EventSize: { max: 1 },
-                        RunnerCounter: { min: 0, max: 1 },
+                        RunnerCounter: { max: 1 },
                     }
                 ],
                 categorical: {
@@ -1215,7 +1197,7 @@ module powerbi.visuals.samples {
         public update(options: VisualUpdateOptions): void {
 
             if (!options || !options.dataViews || !options.dataViews[0]) {
-                this.clear();
+                this.clearAll();
                 return;
             }
 
@@ -1224,7 +1206,7 @@ module powerbi.visuals.samples {
 
             this.data = PulseChart.converter(dataView, this.colors);
             if (!this.validateData(this.data)) {
-                this.clear();
+                this.clearAll();
                 return;
             }
 
@@ -1517,11 +1499,6 @@ module powerbi.visuals.samples {
             var result: CartesianVisualRenderResult;
             var data = this.data;
             this.lastSelectedPoint = null;
-
-            if (!data) {
-                this.clear();
-                return;
-            }
 
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>data.yScales;
@@ -2827,15 +2804,22 @@ module powerbi.visuals.samples {
             };
         }
 
-        private clear(): void {
+        private clearAll(): void {
             this.gaps.selectAll(PulseChart.Gap.selector).remove();
             this.xAxis.selectAll(PulseChart.AxisNode.selector).remove();
 
             if (this.animationHandler) {
                 this.animationHandler.hide();
-            } else {
-                this.clearChart();
             }
+
+            this.clearSelection();
+            this.hideAnimationDot();
+            this.gaps.selectAll("*").remove();
+            this.yAxis.selectAll("*").remove();
+            this.xAxis.selectAll("*").remove();
+            this.chart.selectAll("*").remove();
+            this.dots.selectAll("*").remove();
+            this.animationDot.selectAll("*").remove();
         }
 
         public clearChart(): void {
