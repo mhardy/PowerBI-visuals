@@ -268,7 +268,7 @@ module powerbi.visuals.samples {
 
     export class PulseChart implements IVisual {
 
-        public static RoleDisplayNames = <PulseChartDataRoles<string>>{
+        public static RoleDisplayNames = <PulseChartDataRoles<string>> {
             Timestamp: "Timestamp",
             Category: "Category",
             Value: "Value",
@@ -600,7 +600,7 @@ module powerbi.visuals.samples {
 
             return result;
         }
-
+        /*
         private static GetAxisTextProperties(text?: string, fontSizeValue = 11): TextProperties {
             return {
                 text: text || "",
@@ -609,6 +609,7 @@ module powerbi.visuals.samples {
                 fontSizeValue: fontSizeValue
             };
         }
+        */
 
         private static GetPopupValueTextProperties(text?: string, fontSizeValue = 12): TextProperties {
             return {
@@ -776,24 +777,18 @@ module powerbi.visuals.samples {
             PulseChartXAxisDateFormat.TimeOnly, 60 * 1000],
             ], undefined);
 
-        private static MaxCountOfTicksOnYAxis: number = 10;
+        //private static MaxCountOfTicksOnYAxis: number = 10;
 
         private lastSelectedPoint: SelectionId;
 
-        //private scaleType: string = AxisScale.linear;
-
         private static Chart: ClassAndSelector = createClassAndSelector('chart');
         private static Line: ClassAndSelector  = createClassAndSelector('line');
-        //private static Lines: ClassAndSelector = createClassAndSelector('lines');
-        //private static Node: ClassAndSelector  = createClassAndSelector('node');
-
         private static LineContainer: ClassAndSelector = createClassAndSelector('lineContainer');
         private static LineNode: ClassAndSelector = createClassAndSelector('lineNode');
         //private static Axis: ClassAndSelector = createClassAndSelector('axis');
         private static AxisNode: ClassAndSelector = createClassAndSelector('axisNode');
         private static Dot: ClassAndSelector  = createClassAndSelector('dot');
         private static DotsContainer: ClassAndSelector  = createClassAndSelector('dotsContainer');
-        //private static Dots: ClassAndSelector = createClassAndSelector('dots');
         private static Tooltip: ClassAndSelector = createClassAndSelector('Tooltip');
         private static TooltipRect: ClassAndSelector = createClassAndSelector('tooltipRect');
         private static TooltipTriangle: ClassAndSelector = createClassAndSelector('tooltipTriangle');
@@ -891,7 +886,7 @@ module powerbi.visuals.samples {
             var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.xAxis.formatterOptions.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
             var runnerCounterFormatString = columns.RunnerCounter && visuals.valueFormatter.getFormatString(columns.RunnerCounter.source, settings.formatStringProperty);
-            settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width)
+            settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width);
 
             var minSize: number = PulseChart.DefaultSettings.dots.minSize;
             var maxSize: number = PulseChart.DefaultSettings.dots.maxSize;
@@ -944,9 +939,7 @@ module powerbi.visuals.samples {
             }
 
             seriesLen = 1;
-
             var seriesIndex: number = 0;
-
 
             var dataPoints: PulseChartDataPoint[] = [];
             var groupedIdentity = grouped[seriesIndex];
@@ -1252,7 +1245,6 @@ module powerbi.visuals.samples {
                     marginLeft = 10;
                 }
 
-
             height = this.viewport.height - this.margin.top - marginBottom;
             width = this.viewport.width - marginLeft - this.margin.right - PulseChart.MaxWidthOfYAxis;
 
@@ -1365,9 +1357,7 @@ module powerbi.visuals.samples {
         }
 
         private createAxisY(show: boolean = true): D3.Svg.Axis {
-            var formatter: IValueFormatter,
-                data: PulseChartData = this.data,
-                scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.OrdinalScale> = this.data.commonYScale;
+            var scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.OrdinalScale> = this.data.commonYScale;
 
             var ticks: number = Math.max(2, Math.round(this.size.height / 40));
             var yAxis: D3.Svg.Axis = d3.svg.axis()
@@ -1376,7 +1366,7 @@ module powerbi.visuals.samples {
                 .outerTickSize(0);
             return yAxis;
         }
-
+        /*
         private createAxisYWithCategories(show: boolean = true): D3.Svg.Axis {
             var formatter: IValueFormatter,
                 data: PulseChartData = this.data,
@@ -1414,6 +1404,7 @@ module powerbi.visuals.samples {
                 })
                 .ticks(PulseChart.MaxCountOfTicksOnYAxis);
         }
+        */
 
         private createAxisX(
             isScalar: boolean,
@@ -1448,7 +1439,7 @@ module powerbi.visuals.samples {
                 var values: (Date | number)[] = properties.values.filter((value: Date | number) => value !== null);
 
                 formatterOptions.tickCount = values.length;
-                var formatter = valueFormatter.create(formatterOptions)
+                var formatter = valueFormatter.create(formatterOptions);
                 return d3.svg.axis()
                     .scale(properties.scale)
                     .tickValues(values)
@@ -1524,30 +1515,6 @@ module powerbi.visuals.samples {
             this.animationHandler.setRunnerCounterValue();
 
             return result;
-        }
-
-        private getSeriesSize(): number {
-            if (this.data ||
-                this.data.series ||
-                this.data.series.length) {
-                    return this.data.series.length;
-                }
-            return 0;
-        }
-
-        private getLastData(): any {
-            var seriesSize: number = this.getSeriesSize();
-            if (seriesSize < 1) {
-                return null;
-            }
-
-            var lastSeriesData = this.data.series[seriesSize - 1].data;
-
-            if (lastSeriesData.length < 1) {
-                return null;
-            }
-
-            return lastSeriesData[lastSeriesData.length - 1];
         }
 
         private renderAxes(data: PulseChartData, duration: number): void {
@@ -1812,7 +1779,6 @@ module powerbi.visuals.samples {
                 .attrTween('d', (d: PulseChartSeries) => this.getInterpolationLine(d.data, flooredStart));
         }*/
 
-
         public playAnimation() {
             var selection: D3.UpdateSelection = this.animationSelection;
             var duration: number = this.getAnimationDuration();
@@ -1861,7 +1827,7 @@ module powerbi.visuals.samples {
                         return {
                             series: i,
                             index: j
-                        }
+                        };
                     }
                 }
             }
@@ -1879,7 +1845,7 @@ module powerbi.visuals.samples {
                         return {
                             series: i,
                             index: j
-                        }
+                        };
                     }
                 }
             }
@@ -1979,19 +1945,9 @@ module powerbi.visuals.samples {
             this.animationHandler.setRunnerCounterValue(data[start]);
 
             return (t: number) => {
-
                 if (!this.animationHandler.isPlaying()) {
                     return lineFunction(interpolatedLine);
                 }
-
-                var index: number = interpolateIndex(t);
-                var flooredX = Math.floor(index);
-
-                /*
-                if (t >= 1) {
-                   this.handleSelection(data[flooredX]);
-                }
-                */
 
                 var x: number = interpolateX(t);
                 var y: number = interpolateY(t);
@@ -2003,6 +1959,7 @@ module powerbi.visuals.samples {
                 interpolatedLine.push({ "x": x, "y": y });
 
                 var position: PulseChartAnimationPosition = this.animationHandler.getPosition();
+                var index: number = interpolateIndex(t);
                 this.animationHandler.setPosition({
                     series: position.series,
                     index: index,
@@ -2661,7 +2618,6 @@ module powerbi.visuals.samples {
         }
 
         private static getAxisXSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartXAxisSettings {
-            var xAxisSettings: PulseChartXAxisSettings = <PulseChartXAxisSettings> {};
             var properties = PulseChart.Properties["xAxis"],
             defaultSettings: PulseChartXAxisSettings = PulseChart.DefaultSettings.xAxis;
 
@@ -2702,7 +2658,6 @@ module powerbi.visuals.samples {
         }
 
         private static getAxisYSettings(objects: DataViewObjects, colors: IDataColorPalette): PulseChartYAxisSettings {
-            var yAxisSettings: PulseChartYAxisSettings = <PulseChartYAxisSettings> {};
             var properties = PulseChart.Properties["yAxis"],
                 defaultSettings: PulseChartYAxisSettings = PulseChart.DefaultSettings.yAxis;
 
@@ -3040,8 +2995,6 @@ module powerbi.visuals.samples {
     }
 
     export class PulseAnimator {
-        private static isDebug = false;
-
         private chart: PulseChart;
         private svg: D3.Selection;
         private animationPlay: D3.Selection;
@@ -3131,8 +3084,7 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M22 12c0 5.514-4.486 10-10 10s-10-4.486-10-10 4.486-10 10-10 10 4.486 10 10zm-22 0c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12zm13 0l5-4v8l-5-4zm-5 0l5-4v8l-5-4zm-2 4h2v-8h-2v8z");
 
-
-			/* Prev */
+            /* Prev */
             this.animationPrev = container.append('g').classed(PulseAnimator.AnimationPrev.class, true);
             this.animationPrev
                 .append("circle")
@@ -3145,7 +3097,7 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M9.5 12l7.5-4.5v9l-7.5-4.5zm-4.5 0l6.5 4v-1.634l-3.943-2.366 3.943-2.366v-1.634l-6.5 4zm17 0c0 5.514-4.486 10-10 10s-10-4.486-10-10 4.486-10 10-10 10 4.486 10 10zm-22 0c0 6.627 5.373 12 12 12s12-5.373 12-12-5.373-12-12-12-12 5.373-12 12z");
 
-			/* Next */
+            /* Next */
             this.animationNext = container.append('g').classed(PulseAnimator.AnimationNext.class, true);
             this.animationNext
                 .append("circle")
@@ -3157,7 +3109,7 @@ module powerbi.visuals.samples {
             this.animationNext
                 .append("path")
                 .attr("d", "M7 16.5v-9l7.5 4.5-7.5 4.5zm5.5-8.5v1.634l3.943 2.366-3.943 2.366v1.634l6.5-4-6.5-4zm-.5-6c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12z")
-				.attr("rotate", 180);
+                .attr("rotate", 180);
 
             /* ToEnd */
             this.animationToEnd = container.append('g').classed(PulseAnimator.AnimationToEnd.class, true);
@@ -3172,7 +3124,7 @@ module powerbi.visuals.samples {
                 .append("path")
                 .attr("d", "M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 16v-8l5 4-5 4zm5 0v-8l5 4-5 4zm7-8h-2v8h2v-8z");
 
-	        this.runnerCounter = container.append('g').classed(PulseAnimator.RunnerCounter.class, true);
+            this.runnerCounter = container.append('g').classed(PulseAnimator.RunnerCounter.class, true);
             this.runnerCounterText = this.runnerCounter.append('text');
             this.runnerCounterText.style('alignment-baseline', "hanging");
             this.setControlsColor(PulseAnimator.DefaultControlsColor);
@@ -3373,8 +3325,6 @@ module powerbi.visuals.samples {
         }
 
         public play(): void {
-            PulseAnimator.isDebug && console.log('play');
-
             if (this.animatorState === PulseAnimatorStates.Play) {
                 return;
             }
@@ -3384,7 +3334,6 @@ module powerbi.visuals.samples {
             }
 
             if (this.chart.isAnimationIndexLast(this.getPosition())) {
-				PulseAnimator.isDebug && console.log('end of index');
                 this.playNext();
                 return;
             }
@@ -3396,12 +3345,10 @@ module powerbi.visuals.samples {
         }
 
         public playNext(): void {
-            PulseAnimator.isDebug && console.log('playNext');
             this.pause();
             var position: PulseChartAnimationPosition = this.getPosition();
 
             if (this.chart.isAnimationSeriesLast(position)) {
-				PulseAnimator.isDebug && console.log('end of series');
                 this.setDefaultValues();
                 this.chart.clearSelection();
             } else {
@@ -3414,8 +3361,6 @@ module powerbi.visuals.samples {
         }
 
         public pause(): void {
-            PulseAnimator.isDebug && console.log('pause');
-
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.animatorState = PulseAnimatorStates.Paused;
                 this.chart.pauseAnimation();
@@ -3424,8 +3369,6 @@ module powerbi.visuals.samples {
         }
 
         private reset(): void {
-            PulseAnimator.isDebug && console.log('reset');
-
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3467,8 +3410,6 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
-            PulseAnimator.isDebug && console.log('toEnd');
-
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3482,8 +3423,6 @@ module powerbi.visuals.samples {
         }
 
         public stop(): void {
-            PulseAnimator.isDebug && console.log('stop');
-
             if (!this.isAnimated()) {
                 return;
             }
@@ -3495,7 +3434,6 @@ module powerbi.visuals.samples {
         }
 
         public setPosition(position: PulseChartAnimationPosition): void {
-            PulseAnimator.isDebug && console.log('position', position);
             this.position = position;
         }
 
