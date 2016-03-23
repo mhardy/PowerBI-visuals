@@ -746,7 +746,6 @@ module powerbi.visuals.samples {
         private svg: D3.Selection;
         private chart: D3.Selection;
         private dots: D3.Selection;
-        private xAxis: D3.Selection;
         private yAxis: D3.Selection;
         private gaps: D3.Selection;
 
@@ -791,7 +790,7 @@ module powerbi.visuals.samples {
         private static LineContainer: ClassAndSelector = createClassAndSelector('lineContainer');
         private static LineNode: ClassAndSelector = createClassAndSelector('lineNode');
         //private static Axis: ClassAndSelector = createClassAndSelector('axis');
-        private static AxisNode: ClassAndSelector = createClassAndSelector('axisNode');
+        private static XAxisNode: ClassAndSelector = createClassAndSelector('xAxisNode');
         private static Dot: ClassAndSelector  = createClassAndSelector('dot');
         private static DotsContainer: ClassAndSelector  = createClassAndSelector('dotsContainer');
         private static Tooltip: ClassAndSelector = createClassAndSelector('Tooltip');
@@ -1175,7 +1174,6 @@ module powerbi.visuals.samples {
             this.chart = svg.append('g').attr('class', PulseChart.Chart.class);
             this.dots = svg.append('g').attr('class', 'dots');
             this.animationDot = this.dots.append('circle').classed(PulseChart.AnimationDot.class, true).attr('display', 'none');
-            this.xAxis = svg.append('g').attr('class', 'x axis');
 
             this.animationHandler = new PulseAnimator(this, svg);
 
@@ -1265,16 +1263,6 @@ module powerbi.visuals.samples {
             this.chart.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top));
 
             this.yAxis.attr('transform', SVGUtil.translate(this.size.width + this.margin.left, this.margin.top));
-
-            var xAxisTop: number = this.size.height;
-            switch(this.data.settings.xAxis.position) {
-                case XAxisPosition.Center:
-                    xAxisTop = xAxisTop/2;
-                    break;
-                case XAxisPosition.Bottom:
-                    break;
-            }
-            this.xAxis.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top + xAxisTop));
 
             this.dots.attr('transform', SVGUtil.translate(this.margin.left, this.margin.top));
         }
@@ -1526,9 +1514,6 @@ module powerbi.visuals.samples {
                     return yScales[d.groupIndex](d.y);
                 });
 
-            this.renderGaps(data, duration);
-            this.renderAxes(data, duration);
-
             if (this.data &&
                 this.data.settings &&
                 this.data.settings.playback &&
@@ -1537,6 +1522,9 @@ module powerbi.visuals.samples {
                 }
             this.animationHandler.render(this.isAutoPlay());
             this.animationHandler.setRunnerCounterValue();
+
+            this.renderAxes(data, duration);
+            this.renderGaps(data, duration);
 
             return result;
         }
@@ -1550,30 +1538,27 @@ module powerbi.visuals.samples {
             var axisNodeSelection: D3.Selection,
                 axisNodeUpdateSelection: D3.UpdateSelection,
                 ticksSelection: D3.Selection,
-                ticksUpdateSelection: D3.UpdateSelection,
+                axisBoxUpdateSelection: D3.UpdateSelection,
                 color: string = PulseChart.DefaultSettings.xAxis.color,
                 fontColor: string = PulseChart.DefaultSettings.xAxis.fontColor;
 
-            if (this.data &&
-                this.data.settings &&
-                this.data.settings.yAxis) {
-                    color = this.data.settings.xAxis.color;
-                    fontColor = this.data.settings.xAxis.fontColor;
-                }
+            if (this.data && this.data.settings && this.data.settings.xAxis) {
+                color = this.data.settings.xAxis.color;
+                fontColor = this.data.settings.xAxis.fontColor;
+            }
 
-            axisNodeSelection = this.xAxis.selectAll(PulseChart.AxisNode.selector);
-
+            axisNodeSelection = this.rootSelection.selectAll(PulseChart.XAxisNode.selector);
             axisNodeUpdateSelection = axisNodeSelection.data(data.series);
 
             axisNodeUpdateSelection
                 .enter()
-                .append("g")
-                .classed(PulseChart.AxisNode.class, true);
+                .insert("g", "g." + PulseChart.TooltipContainer.class)
+                .classed(PulseChart.XAxisNode.class, true)
 
             axisNodeUpdateSelection
                 .call((selection: D3.Selection) => {
-                    selection[0].forEach((selectionElement: Element, index: number) => {
-                        d3.select(selectionElement)
+                    selection.forEach((selectionElement: Element, index: number) => {
+                        d3.select(selectionElement[0])
                             .transition()
                             .duration(duration)
                             .call(data.series[index].xAxisProperties.axis.orient('bottom'));
@@ -1584,30 +1569,32 @@ module powerbi.visuals.samples {
                 .exit()
                 .remove();
 
-            ticksSelection = this.xAxis.selectAll(".tick");
-
-            ticksUpdateSelection = ticksSelection
+            axisBoxUpdateSelection = axisNodeUpdateSelection
+                .selectAll(".tick")
                 .selectAll(".axisBox")
                 .data([[]]);
 
-            ticksUpdateSelection
+            axisBoxUpdateSelection
                 .enter()
                 .insert("rect", "text")
                 .classed("axisBox", true);
 
+            axisBoxUpdateSelection
+                .style('display', this.data.settings.xAxis.position === XAxisPosition.Center ? 'inherit' : 'none');;
+
             var tickRectY = this.data.settings.xAxis.position === XAxisPosition.Center ? -11 : 0;
-            ticksUpdateSelection.attr({
+            axisBoxUpdateSelection.attr({
                     x: -(this.data.widthOfXAxisLabel / 2),
                     y: tickRectY + "px",
                     width: this.data.widthOfXAxisLabel,
                     height: PulseChart.XAxisTickHeight + "px"
                 });
 
-            ticksUpdateSelection
+            axisBoxUpdateSelection
                 .exit()
                 .remove();
 
-            this.xAxis
+            axisNodeUpdateSelection
                 .style('stroke', this.data.settings.xAxis.position === XAxisPosition.Center ? color : "none")
                 .style('display', this.data.settings.xAxis.show ? 'inherit' : 'none');
 
@@ -1624,16 +1611,23 @@ module powerbi.visuals.samples {
                     .attr('dy', -9);
             });
 
-            this.xAxis
-                .selectAll("rect.axisBox")
-                .style('display', this.data.settings.xAxis.position === XAxisPosition.Center ? 'inherit' : 'none');
-
-            this.xAxis.selectAll(".domain")
+            axisNodeUpdateSelection.selectAll(".domain")
                 .style('stroke', color);
 
-            this.xAxis.selectAll(".domain")[0].forEach((element: Element) => {
-                element.parentNode.insertBefore(element, element.parentNode.firstChild);
+            axisNodeUpdateSelection.selectAll(".domain").forEach((element: Element) => {
+                $(element).insertBefore($(element).parent().children().first());
             });
+
+            var xAxisTop: number = this.size.height;
+            switch(this.data.settings.xAxis.position) {
+                case XAxisPosition.Center:
+                    xAxisTop = xAxisTop/2;
+                    break;
+                case XAxisPosition.Bottom:
+                    break;
+            }
+
+            axisNodeUpdateSelection.attr('transform', SVGUtil.translate(0, xAxisTop));
         }
 
         private renderYAxis(data: PulseChartData, duration: number): void {
@@ -2796,14 +2790,12 @@ module powerbi.visuals.samples {
 
         private clearAll(): void {
             this.gaps.selectAll(PulseChart.Gap.selector).remove();
-            this.xAxis.selectAll(PulseChart.AxisNode.selector).remove();
 
             if (this.animationHandler) {
                 this.animationHandler.hide();
             }
 
             this.yAxis.selectAll("*").remove();
-            this.xAxis.selectAll("*").remove();
 
             this.clearChart();
         }
@@ -3541,5 +3533,4 @@ module powerbi.visuals.samples {
             return index;
         }
     }
-
 }
