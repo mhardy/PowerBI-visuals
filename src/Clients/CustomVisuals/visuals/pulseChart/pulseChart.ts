@@ -1011,8 +1011,8 @@ module powerbi.visuals.samples {
                 ////console.log('y0', y0);
 
                 if (y0 === null) {
-                    y0_group = grouped[1].values[valueMeasureIndex];
-                    y0 = y0_group.values[categoryIndex];
+                    y0_group = grouped[1] && grouped[1].values[valueMeasureIndex];
+                    y0 = y0_group && y0_group.values && y0_group.values[categoryIndex] || 0;
                 }
 
                 var popupInfo: PulseChartTooltipData = null;
@@ -3543,4 +3543,3 @@ module powerbi.visuals.samples {
     }
 
 }
-d
