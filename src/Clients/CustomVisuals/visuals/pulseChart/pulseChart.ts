@@ -1927,7 +1927,7 @@ module powerbi.visuals.samples {
             this.animationDot
                 .attr('display', 'inline')
                 .attr("fill", this.data.settings.dots.color)
-                .attr("opacity", this.getDotTransparency())
+                .style("opacity", this.getDotTransparency())
                 .attr("r", size);
         }
 
@@ -2091,7 +2091,7 @@ module powerbi.visuals.samples {
                 .attr("cy", (d: PulseChartDataPoint) => yScales[d.groupIndex](d.y))
                 .attr("r", (d: PulseChartDataPoint) => d.eventSize || dotSize)
                 .style("fill", dotColor)
-                .attr("opacity", dotTransparency)
+                .style("opacity", dotTransparency)
                 .style("cursor", "pointer")
                 /*.on("mouseover", function(d) {
                     d3.select(this)
@@ -2802,14 +2802,10 @@ module powerbi.visuals.samples {
                 this.animationHandler.hide();
             }
 
-            this.clearSelection();
-            this.hideAnimationDot();
-            this.gaps.selectAll("*").remove();
             this.yAxis.selectAll("*").remove();
             this.xAxis.selectAll("*").remove();
-            this.chart.selectAll("*").remove();
-            this.dots.selectAll(PulseChart.Dot.selector).remove();
-            this.hideAnimationDot();
+
+            this.clearChart();
         }
 
         public clearChart(): void {
@@ -3240,10 +3236,9 @@ module powerbi.visuals.samples {
 
         private static setControlVisiblity(element: D3.Selection, isVisible:  boolean, isDisabled: boolean = false):  void {
             element
-                .transition()
-                .duration(PulseAnimator.ControlsDuration)
-                .attr('opacity', isVisible ? PulseAnimator.DefaultOpacity : PulseAnimator.DimmedOpacity);
-
+                //.transition()
+                //.duration(PulseAnimator.ControlsDuration)
+                .style('opacity', isVisible ? PulseAnimator.DefaultOpacity : PulseAnimator.DimmedOpacity);
             if (isVisible) {
                 element.attr('display', "inline");
             } else if (isDisabled) {
@@ -3548,3 +3543,4 @@ module powerbi.visuals.samples {
     }
 
 }
+d
