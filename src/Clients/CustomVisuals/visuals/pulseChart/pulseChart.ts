@@ -880,15 +880,11 @@ module powerbi.visuals.samples {
                 settings.xAxis.formatterOptions.format = ValueFormatter.getFormatString(timeStampColumn.source,
                     PulseChart.DefaultSettings.formatStringProperty);
             } else {
-                var values = dataView.categorical.categories;
-                var dateFormatString: string = values && values[0]
-                    ? valueFormatter.getFormatString(values[0].source,  settings.formatStringProperty)
-                    : timeStampColumn.source.format;
-                settings.xAxis.formatterOptions.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, dateFormatString);
+                settings.xAxis.formatterOptions.format = PulseChart.GetDateTimeFormatString(settings.xAxis.dateFormat, timeStampColumn.source.format);
             }
 
-            var widthOfXAxisLabel = 70; //isScalar ? 50 : PulseChart.GetFullWidthOfDateFormat(settings.xAxis.formatterOptions.format, PulseChart.GetAxisTextProperties()) + 3;
-            var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(settings.xAxis.formatterOptions.format, PulseChart.GetPopupValueTextProperties()) + 3;
+            var widthOfXAxisLabel = 70;
+            var widthOfTooltipValueLabel = isScalar ? 60 : PulseChart.GetFullWidthOfDateFormat(timeStampColumn.source.format, PulseChart.GetPopupValueTextProperties()) + 3;
             var heightOfTooltipDescriptionTextLine = TextMeasurementService.measureSvgTextHeight(PulseChart.GetPopupDescriptionTextProperties("lj", settings.popup.fontSize));
             var runnerCounterFormatString = columns.RunnerCounter && visuals.valueFormatter.getFormatString(columns.RunnerCounter.source, settings.formatStringProperty);
             settings.popup.width = Math.max(widthOfTooltipValueLabel + 20, settings.popup.width);
@@ -1027,7 +1023,7 @@ module powerbi.visuals.samples {
                     var formattedValue = categoryValue;
 
                     if (isDateTime && categoryValue) {
-                        formattedValue = valueFormatter.create({ format: settings.xAxis.formatterOptions.format }).format(categoryValue);
+                        formattedValue = valueFormatter.create({ format: timeStampColumn.source.format }).format(categoryValue);
                     }
 
                     popupInfo = {
