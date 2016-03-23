@@ -2795,6 +2795,7 @@ module powerbi.visuals.samples {
                 this.animationHandler.hide();
             }
 
+            this.chart.selectAll(PulseChart.XAxisNode.selector).remove();
             this.yAxis.selectAll("*").remove();
 
             this.clearChart();
@@ -3239,6 +3240,7 @@ module powerbi.visuals.samples {
         }
 
         private disableControls(): void {
+            var showRunner = this.chart.data && this.chart.data.settings && this.chart.data.settings.runnerCounter.show;
             PulseAnimator.setControlVisiblity(this.animationReset, true);
             PulseAnimator.setControlVisiblity(this.animationToEnd, true);
 
@@ -3250,7 +3252,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, showRunner, true);
                     break;
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
@@ -3259,7 +3261,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPrev, true);
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
-                    PulseAnimator.setControlVisiblity(this.runnerCounter,  this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, showRunner, true);
                     break;
                 case PulseAnimatorStates.Stopped:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
@@ -3267,7 +3269,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPrev, true);
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
-                    PulseAnimator.setControlVisiblity(this.runnerCounter,  this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, showRunner, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
                     break;
