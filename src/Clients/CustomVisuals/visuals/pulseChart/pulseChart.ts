@@ -3263,7 +3263,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, true);
-                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Paused:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
@@ -3272,7 +3272,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPrev, true);
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
-                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter,  this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
                     break;
                 case PulseAnimatorStates.Stopped:
                     PulseAnimator.setControlVisiblity(this.animationPlay, true);
@@ -3280,7 +3280,7 @@ module powerbi.visuals.samples {
                     PulseAnimator.setControlVisiblity(this.animationPrev, true);
                     PulseAnimator.setControlVisiblity(this.animationNext, true);
 
-                    PulseAnimator.setControlVisiblity(this.runnerCounter, this.chart.data.settings.runnerCounter.show, true);
+                    PulseAnimator.setControlVisiblity(this.runnerCounter,  this.chart.data.settings && this.chart.data.settings.runnerCounter.show, true);
 
                     PulseAnimator.setControlVisiblity(this.animationPause, false);
                     break;
