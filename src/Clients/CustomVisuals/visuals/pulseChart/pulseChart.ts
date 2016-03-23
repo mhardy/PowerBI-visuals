@@ -1200,6 +1200,8 @@ module powerbi.visuals.samples {
                 return;
             }
 
+            this.svg.style('display', undefined);
+
             this.setSize();
 
             this.calculateAxesProperties();
@@ -1559,8 +1561,6 @@ module powerbi.visuals.samples {
                 .call((selection: D3.Selection) => {
                     selection.forEach((selectionElement: Element, index: number) => {
                         d3.select(selectionElement[0])
-                            .transition()
-                            .duration(duration)
                             .call(data.series[index].xAxisProperties.axis.orient('bottom'));
                     });
                 });
@@ -1654,8 +1654,6 @@ module powerbi.visuals.samples {
                 }
 
             this.yAxis
-                .transition()
-                .duration(duration)
                 .call(yAxis)
                 .attr('display', isShow ? 'inline' : 'none');
 
@@ -2795,9 +2793,7 @@ module powerbi.visuals.samples {
                 this.animationHandler.hide();
             }
 
-            this.chart.selectAll(PulseChart.XAxisNode.selector).remove();
-            this.yAxis.selectAll("*").remove();
-
+            this.svg.style('display', "none");
             this.clearChart();
         }
 
