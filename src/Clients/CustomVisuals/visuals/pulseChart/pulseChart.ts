@@ -1539,7 +1539,7 @@ module powerbi.visuals.samples {
         private renderXAxis(data: PulseChartData, duration: number): void {
             var axisNodeSelection: D3.Selection,
                 axisNodeUpdateSelection: D3.UpdateSelection,
-                ticksSelection: D3.Selection,
+                //ticksSelection: D3.Selection,
                 axisBoxUpdateSelection: D3.UpdateSelection,
                 color: string = PulseChart.DefaultSettings.xAxis.color,
                 fontColor: string = PulseChart.DefaultSettings.xAxis.fontColor;
@@ -1555,7 +1555,7 @@ module powerbi.visuals.samples {
             axisNodeUpdateSelection
                 .enter()
                 .insert("g", "g." + PulseChart.TooltipContainer.class)
-                .classed(PulseChart.XAxisNode.class, true)
+                .classed(PulseChart.XAxisNode.class, true);
 
             axisNodeUpdateSelection
                 .call((selection: D3.Selection) => {
@@ -1662,6 +1662,7 @@ module powerbi.visuals.samples {
         }
 
         public renderChart(): void {
+
             var data: PulseChartData = this.data;
             var series: PulseChartSeries[] = this.data.series;
             var sm: SelectionManager = this.selectionManager;
@@ -1739,6 +1740,9 @@ module powerbi.visuals.samples {
                  nodeParent: ClassAndSelector = PulseChart.LineContainer,
                  rootSelection: D3.UpdateSelection = this.rootSelection;
 
+            if (this.animationSelection) {
+                this.animationSelection.remove();
+            }
              var selection: D3.UpdateSelection = this.animationSelection = rootSelection.filter((d, index) => {
                 return index === limit;
             }).select(nodeParent.selector).selectAll(node.selector).data((d: PulseChartSeries) => [d]);
@@ -1806,7 +1810,7 @@ module powerbi.visuals.samples {
                 .attrTween('d', (d: PulseChartSeries) => this.getInterpolationLine(d.data, flooredStart));
         }*/
 
-        public playAnimation() {
+        public playAnimation(): void {
             var selection: D3.UpdateSelection = this.animationSelection;
             var duration: number = this.getAnimationDuration();
             var position: PulseChartAnimationPosition = this.animationHandler.getPosition();
@@ -1834,14 +1838,17 @@ module powerbi.visuals.samples {
             }
 
             this.hideAnimationDot();
+            d3.selectAll("path").transition();
 
             this.animationSelection
                 .transition()
-                .duration(0);
+                .duration(0)
+                .delay(0);
         }
 
         public stopAnimation() {
             this.pauseAnimation();
+            d3.timer.flush();
         }
 
         public findNextPoint(position: PulseChartAnimationPosition): PulseChartAnimationPosition {
@@ -1850,7 +1857,6 @@ module powerbi.visuals.samples {
 
                 for (var j: number = (i === position.series) ? Math.floor(position.index + 1) : 0; j < series.data.length; j++) {
                     if (series.data[j] && series.data[j].popupInfo) {
-                        this.handleSelection(series.data[j]);
                         return {
                             series: i,
                             index: j
@@ -1868,7 +1874,6 @@ module powerbi.visuals.samples {
 
                 for (var j: number = (i === position.series) ? Math.ceil(position.index - 1) : series.data.length; j >= 0; j--) {
                     if (series.data[j] && series.data[j].popupInfo) {
-                        this.handleSelection(series.data[j]);
                         return {
                             series: i,
                             index: j
@@ -1928,14 +1933,20 @@ module powerbi.visuals.samples {
         }
 
         private getInterpolation(data: PulseChartDataPoint[], start: number) {
+            if (!this.data ||
+                !this.data) {
+                    console.log('no xscale found');
+                    return;
+                }
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>this.data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>this.data.yScales;
             var stop: number = start + 1;
-
+            /*
             if (stop >= data.length) {
                 this.animationHandler.playNext();
                 return;
             }
+            */
 
             this.showAnimationDot();
 
@@ -2049,6 +2060,10 @@ module powerbi.visuals.samples {
         }
 
         private drawDots(data: PulseChartData): void {
+            if (!data ||
+                !data.xScale) {
+                    return;
+                }
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>data.yScales,
                 node: ClassAndSelector = PulseChart.Dot,
@@ -2790,7 +2805,7 @@ module powerbi.visuals.samples {
             this.gaps.selectAll(PulseChart.Gap.selector).remove();
 
             if (this.animationHandler) {
-                this.animationHandler.hide();
+                this.animationHandler.clear();
             }
 
             this.svg.style('display', "none");
@@ -3055,7 +3070,7 @@ module powerbi.visuals.samples {
 
         private color: string;
 
-        private static ControlsDuration = 250;
+        //private static ControlsDuration = 250;
         private static DimmedOpacity = 0.25;
         private static DefaultOpacity = 1;
         private static DefaultControlsColor = "#777";
@@ -3075,6 +3090,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationPlay
+                .on("click", () => this.play());
 
             this.animationPlay
                 .append("path")
@@ -3087,6 +3104,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationPause
+                .on("click", () => this.stop());
 
             this.animationPause
                 .append("path")
@@ -3099,6 +3118,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationReset
+                .on("click", () => this.reset());
 
             this.animationReset
                 .append("path")
@@ -3112,6 +3133,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationPrev
+                .on("click", () => this.prev());
 
             this.animationPrev
                 .append("path")
@@ -3125,6 +3148,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationNext
+                .on("click", () => this.next());
 
             this.animationNext
                 .append("path")
@@ -3139,6 +3164,8 @@ module powerbi.visuals.samples {
                 .attr("cy", 12)
                 .attr("r", 10)
                 .attr("fill", "transparent");
+            this.animationToEnd
+                .on("click", () => this.toEnd());
 
             this.animationToEnd
                 .append("path")
@@ -3163,6 +3190,7 @@ module powerbi.visuals.samples {
 
         public render(isAutoPlay: boolean): void {
             this.renderControls();
+            this.disableControls();
 
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.play();
@@ -3181,34 +3209,28 @@ module powerbi.visuals.samples {
             this.show();
 
             this.animationPlay
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(0, 0))
-                .on("click", () => !this.isPlaying() && void this.play());
+                .attr("fill", this.color);
 
             this.animationPause
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(30, 0))
-                .on("click", () => this.stop());
+                .attr("fill", this.color);
 
             this.animationReset
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(60, 0))
-                .on("click", () => this.reset());
+                .attr("fill", this.color);
 
             this.animationPrev
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(90, 0))
-                .on("click", () => this.prev());
+                .attr("fill", this.color);
 
             this.animationNext
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(120, 0))
-                .on("click", () => this.next());
+                .attr("fill", this.color);
 
             this.animationToEnd
-                .attr("fill", this.color)
                 .attr('transform', SVGUtil.translate(150, 0))
-                .on("click", () => this.isAnimated() && void this.toEnd());
+                .attr("fill", this.color);
 
             this.runnerCounter
                 .attr('fill', this.color)
@@ -3217,10 +3239,15 @@ module powerbi.visuals.samples {
             this.runnerCounterText
                 .style('text-anchor', this.runnerCounterPosition === RunnerCounterPosition.TopLeft ? "start" : "end" );
 
-            this.runnerCounterText.style(PulseChart.ConvertTextPropertiesToStyle(
-                PulseChart.GetRunnerCounterTextProperties(null, this.chart.data.settings.runnerCounter.fontSize)));
-            this.runnerCounterText.style('fill', this.chart.data.settings.runnerCounter.fontColor);
+            if (this.chart &&
+                this.chart.data &&
+                this.chart.data.settings) {
+                    this.runnerCounterText.style(PulseChart.ConvertTextPropertiesToStyle(
+                            PulseChart.GetRunnerCounterTextProperties(null, this.chart.data.settings.runnerCounter.fontSize)));
+                    this.runnerCounterText.style('fill', this.chart.data.settings.runnerCounter.fontColor);
+                }
             this.drawCounterValue();
+
         }
 
         private static setControlVisiblity(element: D3.Selection, isVisible:  boolean, isDisabled: boolean = false):  void {
@@ -3290,15 +3317,7 @@ module powerbi.visuals.samples {
              }
         }
 
-        public hide(): void {
-            if (this.isAnimated()) {
-                this.reset();
-            }
-            this.container.style('display', 'none');
-        }
-
         public show(): void {
-            this.disableControls();
             this.container.style('display', 'inline');
         }
 
@@ -3345,6 +3364,7 @@ module powerbi.visuals.samples {
         }
 
         public play(): void {
+
             if (this.animatorState === PulseAnimatorStates.Play) {
                 return;
             }
@@ -3365,6 +3385,7 @@ module powerbi.visuals.samples {
         }
 
         public playNext(): void {
+
             this.pause();
             var position: PulseChartAnimationPosition = this.getPosition();
 
@@ -3381,6 +3402,7 @@ module powerbi.visuals.samples {
         }
 
         public pause(): void {
+
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.animatorState = PulseAnimatorStates.Paused;
                 this.chart.pauseAnimation();
@@ -3389,6 +3411,7 @@ module powerbi.visuals.samples {
         }
 
         private reset(): void {
+
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3400,11 +3423,13 @@ module powerbi.visuals.samples {
         }
 
         private next(): void {
+
             if (!this.isAnimated()) {
                 return;
             }
 
             this.stop();
+
             var newIndex: PulseChartAnimationPosition = this.chart.findNextPoint(this.getPosition());
             if (newIndex) {
                 this.setPosition(newIndex);
@@ -3430,6 +3455,7 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
+
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3443,6 +3469,7 @@ module powerbi.visuals.samples {
         }
 
         public stop(): void {
+
             if (!this.isAnimated()) {
                 return;
             }
@@ -3459,6 +3486,15 @@ module powerbi.visuals.samples {
 
         public getPosition(): PulseChartAnimationPosition {
             return this.position;
+        }
+
+        public clear(): void {
+
+            if (this.isAnimated()) {
+                this.chart.stopAnimation();
+            }
+            this.setDefaultValues();
+            this.container.style('display', 'none');
         }
     }
 
