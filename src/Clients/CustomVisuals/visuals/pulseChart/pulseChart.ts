@@ -1742,26 +1742,23 @@ module powerbi.visuals.samples {
                  nodeParent: ClassAndSelector = PulseChart.LineContainer,
                  rootSelection: D3.UpdateSelection = this.rootSelection;
 
-            if (this.animationSelection) {
-                this.animationSelection.remove();
-            }
-             var selection: D3.UpdateSelection = this.animationSelection = rootSelection.filter((d, index) => {
+            this.animationSelection = rootSelection.filter((d, index) => {
                 return index === limit;
             }).select(nodeParent.selector).selectAll(node.selector).data((d: PulseChartSeries) => [d]);
 
-            selection
+            this.animationSelection
                 .enter()
                 .append('path')
                 .classed(node.class, true);
 
-            selection
+            this.animationSelection
                 .style({
                     'fill': "none",
                     'stroke': (d: PulseChartSeries) => d.color,
                     'stroke-width': (d: PulseChartSeries) => `${d.width}px`
                 });
 
-            selection
+            this.animationSelection
                 .attr('d', (d: PulseChartSeries) => {
                     var flooredStart = this.animationHandler.flooredPosition.index;
 
@@ -1775,7 +1772,7 @@ module powerbi.visuals.samples {
                     }
                  });
 
-           selection
+           this.animationSelection
                 .exit()
                 .remove();
         }
@@ -1931,12 +1928,11 @@ module powerbi.visuals.samples {
             this.animationDot.attr('display', 'none');
         }
 
-        private getInterpolation(data: PulseChartDataPoint[], start: number) {
-            if (!this.data ||
-                !this.data) {
-                    console.log('no xscale found');
-                    return;
-                }
+        private getInterpolation(data: PulseChartDataPoint[], start: number): (number) => string {
+            if (!this.data) {
+                return;
+            }
+
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>this.data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>this.data.yScales;
             var stop: number = start + 1;
@@ -2013,11 +2009,12 @@ module powerbi.visuals.samples {
             this.chart.selectAll(PulseChart.Tooltip.selector).remove();
         }
 
-        private handleSelection(d: PulseChartDataPoint): void {
-            var sm: SelectionManager = this.selectionManager;
-            //this.clearSelection();
+        private handleSelection(dataPoint: PulseChartDataPoint): void {
+            if(!this.data) {
+                return;
+            }
 
-            if ((!d || !d.popupInfo) && (this.animationHandler.isPlaying()))  {
+            if ((!dataPoint || !dataPoint.popupInfo) && (this.animationHandler.isPlaying()))  {
 
                 this.animationHandler.pause();
                 this.animationHandler.play();
@@ -2026,7 +2023,7 @@ module powerbi.visuals.samples {
 
             this.animationHandler.pause();
 
-            sm.select(d.identity).then((selectionIds: SelectionId[]) => {
+            this.selectionManager.select(dataPoint.identity).then((selectionIds: SelectionId[]) => {
                 this.setSelection(selectionIds);
 
                 setTimeout(() => {
@@ -2187,6 +2184,10 @@ module powerbi.visuals.samples {
         }
 
         private setSelection(selectionIds?: SelectionId[]): void {
+            if(!this.data) {
+                return;
+            }
+
             this.drawDots(this.data);
             this.drawTooltips(this.data, selectionIds);
         }
@@ -2219,7 +2220,7 @@ module powerbi.visuals.samples {
             return false;
         }
 
-        private drawTooltips(data: PulseChartData, selectionIds?: SelectionId[]) {
+        private drawTooltips(data: PulseChartData, selectionIds?: SelectionId[]): void {
             var xScale: D3.Scale.LinearScale = <D3.Scale.LinearScale>data.xScale,
                 yScales: D3.Scale.LinearScale[] = <D3.Scale.LinearScale[]>data.yScales,
                 node: ClassAndSelector = PulseChart.Tooltip,
