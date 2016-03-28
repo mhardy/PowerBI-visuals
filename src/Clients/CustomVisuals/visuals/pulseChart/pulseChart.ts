@@ -114,7 +114,7 @@ module powerbi.visuals.samples {
     export function createEnumTypeFromEnum(type: any): IEnumType {
         var even: any = false;
         return createEnumType(Object.keys(type)
-            .filter((key,i) => (i % 2 === even && type[key] === key && !void(even === !even)) || i % 2 !== even)
+            .filter((key,i) => ((!!(i % 2)) == even && type[key] === key && !void(even === !even)) || (!!(i % 2)) != even)
             .map(x => <IEnumMember>{ value: x, displayName: x }));
     }
 
@@ -3056,7 +3056,7 @@ module powerbi.visuals.samples {
         private container: D3.Selection;
 
         private runnerCounterValue: any;
-        private runnerCounterTopLeftPosition: number = 120;
+        private runnerCounterTopLeftPosition: number = 180;
         private get runnerCounterPosition(): RunnerCounterPosition {
             return this.chart.data.settings.runnerCounter.position;
         }
