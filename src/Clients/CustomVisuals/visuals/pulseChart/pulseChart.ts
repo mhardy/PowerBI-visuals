@@ -1346,7 +1346,7 @@ module powerbi.visuals.samples {
             var ticks: number = Math.max(2, Math.round(this.size.height / 40));
             var yAxis: D3.Svg.Axis = d3.svg.axis()
                 .scale(scale)
-                .ticks(Math.round(ticks))
+                .ticks(ticks)
                 .outerTickSize(0);
             return yAxis;
         }
@@ -1659,6 +1659,8 @@ module powerbi.visuals.samples {
 
              this.yAxis.selectAll('.domain, path, line').style('stroke', color);
              this.yAxis.selectAll('text').style('fill', fontColor);
+             this.yAxis.selectAll('g.tick line')
+                 .attr('x1', -this.size.width);
         }
 
         public renderChart(): void {
