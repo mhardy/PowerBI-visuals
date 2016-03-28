@@ -2823,10 +2823,10 @@ module powerbi.visuals.samples {
         }
 
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
-            var enumeration = new ObjectEnumerationBuilder(),
-                settings: PulseChartSettings;
-
-            settings = this.data.settings;
+            var enumeration = new ObjectEnumerationBuilder();
+            if(!this.data || !this.data.settings) {
+                return enumeration.complete();
+            }
 
             switch (options.objectName) {
                 case "popup": {
