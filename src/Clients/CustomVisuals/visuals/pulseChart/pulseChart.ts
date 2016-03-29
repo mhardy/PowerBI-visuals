@@ -148,7 +148,7 @@ module powerbi.visuals.samples {
     export interface PulseChartSeriesSetting {
         fill: string;
         width: number;
-        showByDefault: boolean;
+        //showByDefault: boolean;
     }
 
     export interface PulseChartPlaybackSettings {
@@ -374,12 +374,12 @@ module powerbi.visuals.samples {
                                 numeric: true
                             }
                         },
-                        showByDefault: {
+                        /*showByDefault: {
                             displayName: 'Show by default',
                             type: {
                                 bool: true
                             }
-                        }
+                        }*/
                     }
                 },
                 gaps: {
@@ -700,7 +700,7 @@ module powerbi.visuals.samples {
             series: {
                 fill: '#3779B7',
                 width: 2,
-                showByDefault: true,
+                //showByDefault: true,
             },
             xAxis: {
                 color: "#777777",
@@ -2631,15 +2631,15 @@ module powerbi.visuals.samples {
 
             var fill = colorHelper.getColorForMeasure(objects, "");
 
-            var showByDefault = DataViewObjects.getValue<boolean>(
+            /*var showByDefault = DataViewObjects.getValue<boolean>(
                 objects,
                 PulseChart.Properties["series"]["showByDefault"],
-                PulseChart.DefaultSettings.series.showByDefault);
+                PulseChart.DefaultSettings.series.showByDefault);*/
 
             return {
                 width,
                 fill,
-                showByDefault
+                //showByDefault
             };
         }
 
@@ -2961,7 +2961,7 @@ module powerbi.visuals.samples {
                 properties: {
                     fill: seriesSettings.fill,
                     width: seriesSettings.width,
-                    showByDefault: seriesSettings.showByDefault
+                    //showByDefault: seriesSettings.showByDefault
                 }
             };
 
