@@ -218,7 +218,7 @@ module powerbi.visuals.samples {
 
         grouped: DataViewValueColumnGroup[];
 
-        xScale?: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>;
+        xScale?: D3.Scale.TimeScale | D3.Scale.LinearScale;
         commonYScale?: D3.Scale.LinearScale;
         yScales?: D3.Scale.LinearScale[];
 
@@ -1147,8 +1147,8 @@ module powerbi.visuals.samples {
             return result;
         }
 
-        private static createScale(isScalar: boolean, domain: (number | Date)[], minX: number, maxX: number): D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale> {
-            var scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.TimeScale>;
+        private static createScale(isScalar: boolean, domain: (number | Date)[], minX: number, maxX: number): D3.Scale.LinearScale | D3.Scale.TimeScale {
+            var scale: D3.Scale.LinearScale | D3.Scale.TimeScale;
 
             if (isScalar) {
                 scale = d3.scale.linear();
@@ -1205,6 +1205,11 @@ module powerbi.visuals.samples {
             this.setSize();
 
             this.calculateAxesProperties();
+            if(this.data.xScale.ticks(undefined).length < 2) {
+                this.clearAll();
+                return;
+            }
+
             this.render(true);
         }
 
@@ -1288,7 +1293,7 @@ module powerbi.visuals.samples {
             });
         }
 
-        private getXAxisScale(): D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale> {
+        private getXAxisScale(): D3.Scale.TimeScale | D3.Scale.LinearScale {
             var data: PulseChartData = this.data;
 
             return PulseChart.createScale(
@@ -1335,6 +1340,11 @@ module powerbi.visuals.samples {
                         maxValue = value;
                     }
                 });
+                if(maxValue === minValue) {
+                    var offset = maxValue === 0 ? 1 : Math.abs(maxValue/2);
+                    maxValue += offset;
+                    minValue -= offset;
+                }
 
                 return PulseChart.createScale(true, [maxValue, minValue], stepOfHeight * index, stepOfHeight * (index + 1));
             });
