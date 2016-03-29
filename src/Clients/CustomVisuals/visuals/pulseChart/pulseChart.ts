@@ -114,7 +114,7 @@ module powerbi.visuals.samples {
     export function createEnumTypeFromEnum(type: any): IEnumType {
         var even: any = false;
         return createEnumType(Object.keys(type)
-            .filter((key,i) => ((!!(i % 2)) == even && type[key] === key && !void(even === !even)) || (!!(i % 2)) != even)
+            .filter((key,i) => ((!!(i % 2)) === even && type[key] === key && !void(even === !even)) || (!!(i % 2)) !== even)
             .map(x => <IEnumMember>{ value: x, displayName: x }));
     }
 
@@ -1407,26 +1407,15 @@ module powerbi.visuals.samples {
             formatterOptions: ValueFormatterOptions,
             dateFormat: PulseChartXAxisDateFormat): PulseChartXAxisProperties[] {
 
-            var xAxisProperties: PulseChartXAxisProperties[] = series.map((seriesElement: PulseChartSeries) => {
-                var dataPoints: PulseChartDataPoint[] = seriesElement.data,
-                    minValue: number | Date = dataPoints[0].categoryValue,
-                    maxValue: number | Date = dataPoints[dataPoints.length - 1].categoryValue,
-                    minX: number = originalScale(dataPoints[0].categoryValue),
-                    maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue);
-
-                var scale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale> = PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
-                var values: (Date | number)[] = isScalar
-                    ? d3.range(<number>minValue, <number>maxValue)
-                    : (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day).range(<Date>minValue, <Date>maxValue);
-
+            var scales = this.getXAxisScales(series, isScalar, originalScale);
+            var rotate = this.isRotatedXAxisTicks(scales);
+            var xAxisProperties: PulseChartXAxisProperties[] = scales.map((scale: D3.Scale.TimeScale | D3.Scale.LinearScale) => {
                 return <PulseChartXAxisProperties> {
-                    values: values,
+                    values: this.getXAxisValuesToDisplay(scale, rotate, isScalar, dateFormat),
                     scale: scale,
-                    rotate: false
+                    rotate: rotate
                 };
             });
-
-            this.resolveIntersections(xAxisProperties);
 
             formatterOptions.tickCount = xAxisProperties.length && xAxisProperties.map(x => x.values.length).reduce((a,b) => a + b);
             xAxisProperties.forEach((properties: PulseChartXAxisProperties) => {
@@ -1445,61 +1434,81 @@ module powerbi.visuals.samples {
             return xAxisProperties;
         }
 
-        private resolveIntersections(xAxisProperties: PulseChartXAxisProperties[]): void {
-            var rotate = this.isRotatedXAxisTicks(xAxisProperties);
-
-            xAxisProperties.forEach(xAxisProperty => {
-                xAxisProperty.rotate = rotate;
-                if(!xAxisProperty.values.length) {
-                    return;
-                }
-
-                var tickWidth = rotate
-                    ? PulseChart.XAxisTickHeight * (rotate ? Math.abs(Math.sin(PulseChart.AxisTickRotateAngle * Math.PI / 180)) : 0)
-                    : this.data.widthOfXAxisLabel;
-                var tickSpace = PulseChart.XAxisTickSpace;
-                var scaledValues = xAxisProperty.values.map(xAxisProperty.scale);
-                var maxValue: number = Math.max.apply(null, scaledValues);
-                var minValue: number = Math.min.apply(null, scaledValues);
-                var width = maxValue - minValue;
-
-                if(width < tickWidth) {
-                    xAxisProperty.values = [];
-                    return;
-                }
-
-                var maxTicks = Math.ceil((width + tickSpace - tickWidth) / (tickWidth + tickSpace));
-                if(rotate) {
-                    maxTicks = Math.min(PulseChart.MinimumTicksToRotate, maxTicks);
-                }
-
-                xAxisProperty.values = xAxisProperty.values
-                    .filter((x,i) => scaledValues[i] > minValue + tickWidth/2 && scaledValues[i] < maxValue - tickWidth / 2);
-
-                if(!xAxisProperty.values.length) {
-                    return;
-                }
-
-                var visibleTicksScale = d3.scale.linear().domain([0, maxTicks - 1]).range([0, xAxisProperty.values.length - 1]);
-
-                xAxisProperty.values = d3.range(maxTicks).map(x => xAxisProperty.values[Math.ceil(visibleTicksScale(x))]);
+        private getXAxisScales(
+            series: PulseChartSeries[],
+            isScalar: boolean,
+            originalScale: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>): D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>[] {
+            return series.map((seriesElement: PulseChartSeries) => {
+                var dataPoints: PulseChartDataPoint[] = seriesElement.data,
+                    minValue: number | Date = dataPoints[0].categoryValue,
+                    maxValue: number | Date = dataPoints[dataPoints.length - 1].categoryValue,
+                    minX: number = originalScale(dataPoints[0].categoryValue),
+                    maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue);
+                return PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
             });
         }
 
-        private isRotatedXAxisTicks(xAxisProperties: PulseChartXAxisProperties[]): boolean {
-            return this.data.settings.xAxis.position === XAxisPosition.Bottom && xAxisProperties.some(xAxisProperty => {
-                if(!xAxisProperty.values.length) {
-                    return false;
-                }
-
+        private isRotatedXAxisTicks(scales: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>[]): boolean {
+              return this.data.settings.xAxis.position === XAxisPosition.Bottom && scales.some((scale: D3.Scale.TimeScale | D3.Scale.LinearScale) => {
                 var tickWidth = this.data.widthOfXAxisLabel;
-                var scaledValues = xAxisProperty.values.map(xAxisProperty.scale);
-                var maxValue: number = Math.max.apply(null, scaledValues);
-                var minValue: number = Math.min.apply(null, scaledValues);
-                var width = maxValue - minValue;
-                var maxTicks = Math.ceil((width + PulseChart.XAxisTickSpace - tickWidth) / (tickWidth + PulseChart.XAxisTickSpace));
+                var width = scale.range()[1] - scale.range()[0];
+                var maxTicks = Math.floor((width + PulseChart.XAxisTickSpace) / (tickWidth + PulseChart.XAxisTickSpace));
                 return maxTicks < PulseChart.MinimumTicksToRotate;
             });
+        }
+
+        private getXAxisValuesToDisplay(
+            scale: D3.Scale.TimeScale | D3.Scale.LinearScale,
+            rotate: boolean,
+            isScalar: boolean,
+            dateFormat: PulseChartXAxisDateFormat): (Date | number)[] {
+            var genScale = <D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>>scale;
+
+            var tickWidth = rotate
+                ? PulseChart.XAxisTickHeight * (rotate ? Math.abs(Math.sin(PulseChart.AxisTickRotateAngle * Math.PI / 180)) : 0)
+                : this.data.widthOfXAxisLabel;
+            var tickSpace = PulseChart.XAxisTickSpace;
+
+            if(scale.range()[1] < tickWidth) {
+                return [];
+            }
+
+            var minValue = scale.invert(scale.range()[0] + tickWidth/2);
+            var maxValue = scale.invert(scale.range()[1] - tickWidth/2);
+            var width = scale.range()[1] - scale.range()[0];
+
+            var values = (isScalar 
+                ? <any>d3 
+                : dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day)
+                .range(<any>minValue, <any>maxValue);
+
+            if(!values.length || _.last(values) < maxValue) {
+                values.push(maxValue);
+            }
+
+            var maxTicks = Math.floor((width + tickSpace) / (tickWidth + tickSpace));
+            if(rotate) {
+                maxTicks = Math.min(PulseChart.MinimumTicksToRotate, maxTicks);
+            }
+
+            if(!maxTicks) {
+                return [];
+            }
+
+            maxTicks = Math.min(values.length, maxTicks);
+
+            var valuesIndexses = d3.scale.ordinal().domain(d3.range(maxTicks)).rangePoints([0, values.length - 1]).range();//randeRoundPoints is not defined
+            values = valuesIndexses.map(x => values[Math.round(x)]);
+
+            for(var i = 1; i < values.length; i++) {
+                var prevXValue = genScale(values[i - 1]);
+                var curXValue = genScale(values[i]);
+                if(curXValue - prevXValue < tickWidth + tickSpace/3) {
+                    values.splice(i--, 1);
+                }
+            }
+
+            return values;
         }
 
         private isAutoPlay(): boolean {
