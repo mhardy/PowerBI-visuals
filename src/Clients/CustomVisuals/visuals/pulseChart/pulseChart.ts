@@ -169,6 +169,7 @@ module powerbi.visuals.samples {
     }
 
     export interface PulseChartAxisSettings {
+        formatterOptions?: ValueFormatterOptions;
         fontColor: string;
         color: string;
         show: boolean;
@@ -177,7 +178,6 @@ module powerbi.visuals.samples {
     export interface PulseChartXAxisSettings extends PulseChartAxisSettings {
         position: XAxisPosition;
         dateFormat?: PulseChartXAxisDateFormat;
-        formatterOptions?: ValueFormatterOptions;
     }
 
     export interface PulseChartYAxisSettings extends PulseChartAxisSettings {
@@ -866,6 +866,7 @@ module powerbi.visuals.samples {
                 return null;
             }
 
+            var minValuesValue = Math.min.apply(null, columns.Value.values), maxValuesValue = Math.max.apply(null, columns.Value.values);
             var minCategoryValue = Math.min.apply(null, categoryValues), maxCategoryValue = Math.max.apply(null, categoryValues);
             settings.xAxis.dateFormat =
                 (maxCategoryValue - minCategoryValue < (24 * 60 * 60 * 1000)
@@ -874,6 +875,11 @@ module powerbi.visuals.samples {
                     : PulseChartXAxisDateFormat.DateOnly;
 
             settings.xAxis.formatterOptions = { value: new Date(minCategoryValue), value2: new Date(maxCategoryValue) };
+            settings.yAxis.formatterOptions = { 
+                value: minValuesValue,
+                value2: maxValuesValue,
+                format: ValueFormatter.getFormatString(columns.Value.source, PulseChart.DefaultSettings.formatStringProperty)
+            };
 
             if (isScalar) {
                 settings.xAxis.formatterOptions.format = ValueFormatter.getFormatString(timeStampColumn.source,
@@ -1353,11 +1359,13 @@ module powerbi.visuals.samples {
         private createAxisY(show: boolean = true): D3.Svg.Axis {
             var scale: D3.Scale.GenericScale<D3.Scale.LinearScale | D3.Scale.OrdinalScale> = this.data.commonYScale;
 
+            var formatter = valueFormatter.create(this.data.settings.yAxis.formatterOptions);
             var ticks: number = Math.max(2, Math.round(this.size.height / 40));
             var yAxis: D3.Svg.Axis = d3.svg.axis()
                 .scale(scale)
                 .ticks(ticks)
-                .outerTickSize(0);
+                .outerTickSize(0)
+                .tickFormat(formatter.format);
             return yAxis;
         }
         /*
@@ -1425,9 +1433,7 @@ module powerbi.visuals.samples {
                 properties.axis = d3.svg.axis()
                     .scale(properties.scale)
                     .tickValues(values)
-                    .tickFormat((value: Date) => {
-                        return formatter.format(value);
-                    })
+                    .tickFormat(formatter.format)
                     .outerTickSize(0);
             });
 
