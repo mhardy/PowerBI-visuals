@@ -874,7 +874,10 @@ module powerbi.visuals.samples {
                     ? PulseChartXAxisDateFormat.TimeOnly
                     : PulseChartXAxisDateFormat.DateOnly;
 
-            settings.xAxis.formatterOptions = { value: new Date(minCategoryValue), value2: new Date(maxCategoryValue) };
+            settings.xAxis.formatterOptions = { 
+                value: isScalar ? minCategoryValue : new Date(minCategoryValue), 
+                value2: isScalar ? maxCategoryValue : new Date(maxCategoryValue) 
+            };
             settings.yAxis.formatterOptions = { 
                 value: minValuesValue,
                 value2: maxValuesValue,
@@ -945,17 +948,17 @@ module powerbi.visuals.samples {
             }
 
             seriesLen = 1;
-            var seriesIndex: number = 0;
+            var firstGroupIndex: number = 0;
 
             var dataPoints: PulseChartDataPoint[] = [];
-            var groupedIdentity = grouped[seriesIndex];
+            var groupedIdentity = grouped[firstGroupIndex];
 
             var color = settings.series.fill;
             var width: number = settings.series.width;
             var seriesLabelSettings: LineChartDataLabelsSettings;
 
             if (!hasDynamicSeries) {
-                var labelsSeriesGroup = grouped && grouped.length > 0 && grouped[0].values ? grouped[0].values[seriesIndex] : null;
+                var labelsSeriesGroup = grouped && grouped.length > 0 && grouped[0].values ? grouped[0].values[firstGroupIndex] : null;
                 var labelObjects = (labelsSeriesGroup && labelsSeriesGroup.source && labelsSeriesGroup.source.objects) ? <DataLabelObject>labelsSeriesGroup.source.objects['labels'] : null;
                 if (labelObjects) {
                     //seriesLabelSettings = Prototype.inherit(defaultLabelSettings);
@@ -983,9 +986,9 @@ module powerbi.visuals.samples {
 
                 if (isGap && dataPoints.length > 0) {
                     series.push({
-                        displayName: grouped[seriesIndex].name,
+                        displayName: grouped[firstGroupIndex].name,
                         key: key,
-                        lineIndex: seriesIndex,
+                        lineIndex: series.length,
                         color: color,
                         xCol: timeStampColumn.source,
                         yCol: timeStampColumn.source,
@@ -1045,7 +1048,7 @@ module powerbi.visuals.samples {
                     categoryValue: categoryValue,
                     value: value,
                     categoryIndex: categoryIndex,
-                    seriesIndex: seriesIndex,
+                    seriesIndex: series.length,
                     tooltipInfo: null,//tooltipInfo,
                     popupInfo: popupInfo,
                     selected: false,
@@ -1071,9 +1074,9 @@ module powerbi.visuals.samples {
 
             if (dataPoints.length > 0) {
                 series.push({
-                    displayName: grouped[seriesIndex].name,
+                    displayName: grouped[firstGroupIndex].name,
                     key: key,
-                    lineIndex: seriesIndex,
+                    lineIndex: series.length,
                     color: color,
                     xCol: timeStampColumn.source,
                     yCol: timeStampColumn.source,
@@ -1193,16 +1196,16 @@ module powerbi.visuals.samples {
         public update(options: VisualUpdateOptions): void {
 
             if (!options || !options.dataViews || !options.dataViews[0]) {
-                this.clearAll();
+                this.clearAll(true);
                 return;
             }
 
             this.viewport = $.extend({}, options.viewport);
             var dataView: DataView = options.dataViews[0];
 
-            this.data = PulseChart.converter(dataView, this.colors);
+            this.updateData(PulseChart.converter(dataView, this.colors));
             if (!this.validateData(this.data)) {
-                this.clearAll();
+                this.clearAll(true);
                 return;
             }
 
@@ -1212,11 +1215,43 @@ module powerbi.visuals.samples {
 
             this.calculateAxesProperties();
             if(this.data.xScale.ticks(undefined).length < 2) {
-                this.clearAll();
+                this.clearAll(true);
                 return;
             }
 
             this.render(true);
+        }
+
+        private updateData(data: PulseChartData): void {
+            if(!this.data) {
+                this.data = data;
+            }
+
+            var oldDataObj = this.getDataArrayToCompare(this.data);
+            var newDataObj = this.getDataArrayToCompare(data);
+            if(!_.isEqual(oldDataObj, newDataObj)) {
+                this.clearAll(false);
+            }
+
+            this.data = data;
+        }
+
+        private getDataArrayToCompare(data: PulseChartData): any[] {
+            var dataPoints = <PulseChartDataPoint[]>_.flatten(data.series.map(x => x.data));
+            return _.flatten(dataPoints.map(x => 
+            {
+               return x && _.flatten([
+                     [
+                         x.categoryValue,
+                         x.eventSize,
+                         x.groupIndex,
+                         x.runnerCounterValue,
+                         x.y,
+                         x.seriesIndex
+                     ],
+                     x.popupInfo && [x.popupInfo.description, x.popupInfo.title, x.popupInfo.value]
+                 ]);
+            }));
         }
 
         private validateData(data: PulseChartData): boolean {
@@ -1483,18 +1518,21 @@ module powerbi.visuals.samples {
             var maxValue = scale.invert(scale.range()[1] - tickWidth/2);
             var width = scale.range()[1] - scale.range()[0];
 
-            var values = (isScalar 
-                ? <any>d3 
-                : dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day)
-                .range(<any>minValue, <any>maxValue);
-
-            if(!values.length || _.last(values) < maxValue) {
-                values.push(maxValue);
-            }
-
             var maxTicks = Math.floor((width + tickSpace) / (tickWidth + tickSpace));
             if(rotate) {
                 maxTicks = Math.min(PulseChart.MinimumTicksToRotate, maxTicks);
+            }
+
+            var values = [];
+            if(isScalar) {
+                values = d3.range(<any>minValue, <any>maxValue, (<any>maxValue - <any>minValue) / (maxTicks * 100));
+            } else {
+                values = (dateFormat === PulseChartXAxisDateFormat.TimeOnly ? d3.time.minute : d3.time.day)
+                    .range(<any>minValue, <any>maxValue);
+            }
+
+            if(!values.length || _.last(values) < maxValue) {
+                values.push(maxValue);
             }
 
             if(!maxTicks) {
@@ -1834,7 +1872,6 @@ module powerbi.visuals.samples {
         }*/
 
         public playAnimation(): void {
-            var selection: D3.UpdateSelection = this.animationSelection;
             var duration: number = this.getAnimationDuration();
 
             var flooredStart = this.animationHandler.flooredPosition.index;
@@ -1842,7 +1879,7 @@ module powerbi.visuals.samples {
             //this.clearSelection();
             this.showAnimationDot();
 
-            selection
+            this.animationSelection
                 .transition()
                 .duration(duration)
                 .ease("linear")
@@ -2826,14 +2863,17 @@ module powerbi.visuals.samples {
             };
         }
 
-        private clearAll(): void {
+        private clearAll(hide: boolean): void {
             this.gaps.selectAll(PulseChart.Gap.selector).remove();
 
             if (this.animationHandler) {
                 this.animationHandler.clear();
             }
 
-            this.svg.style('display', "none");
+            if(hide) {
+                this.svg.style('display', "none");
+            }
+
             this.clearChart();
         }
 
