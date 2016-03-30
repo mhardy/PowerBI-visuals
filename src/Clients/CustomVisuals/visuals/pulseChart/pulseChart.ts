@@ -602,6 +602,18 @@ module powerbi.visuals.samples {
 
             return result;
         }
+
+        private static PopupMinHeight: number = 20;
+        private static PopupMinWidth: number = 20;
+        private static PopupMaxHeight: number = 80;
+        private static PopupMaxWidth: number = 2000;
+        private static MaxWidthOfYAxis: number = 50;
+        private static PopupTextPadding: number = 3;
+        private static XAxisTickSpace: number = 15;
+        private static XAxisTickHeight: number = 16;
+        private static MinimumTicksToRotate:  number = 3;
+        private static AxisTickRotateAngle: number = -35;
+
         /*
         private static GetAxisTextProperties(text?: string, fontSizeValue = 11): TextProperties {
             return {
@@ -677,7 +689,7 @@ module powerbi.visuals.samples {
                 alwaysOnTop: false,
                 showType: PulseChartPopupShow.Selected,
                 width: 100,
-                height: 80,
+                height: PulseChart.PopupMaxHeight,
                 color: "#808181",
                 fontSize: 10,
                 fontColor: 'white',
@@ -731,13 +743,6 @@ module powerbi.visuals.samples {
             formatStringProperty: PulseChart.Properties["general"]["formatString"]
         };
 
-        private static MaxWidthOfYAxis: number = 50;
-        private static PopupTextPadding: number = 3;
-        private static XAxisTickSpace: number = 15;
-        private static XAxisTickHeight: number = 16;
-        private static MinimumTicksToRotate:  number = 3;
-        private static AxisTickRotateAngle: number = -35;
-
         public data: PulseChartData;
         public margin: IMargin;
         public viewport: IViewport;
@@ -759,10 +764,10 @@ module powerbi.visuals.samples {
         private host: IVisualHostServices;
 
         private static DefaultMargin: IMargin = {
-            top: 120,
+            top: 140,
             bottom: 100,
-            right: 45,
-            left: 45,
+            right: 25,
+            left: 25,
         };
 
         private static DefaultViewport: IViewport = {
@@ -1267,28 +1272,18 @@ module powerbi.visuals.samples {
         }
 
         private setSize(): void {
-            var height: number,
-                width: number,
-                marginBottom: number,
-                marginLeft: number;
-
-            marginBottom = this.data.widthOfXAxisLabel * Math.abs(Math.sin(PulseChart.AxisTickRotateAngle * Math.PI / 180)) + 10;
-
-            if (this.data && this.data.settings && this.data.settings.popup && !this.data.settings.popup.alwaysOnTop) {
+            var marginBottom = this.data.widthOfXAxisLabel * Math.abs(Math.sin(PulseChart.AxisTickRotateAngle * Math.PI / 180)) + 10;
+            if (this.data.settings.popup && !this.data.settings.popup.alwaysOnTop) {
                 marginBottom = Math.max(this.margin.bottom, marginBottom);
             }
 
-            if (this.data &&
-                this.data.settings &&
-                this.data.settings.yAxis &&
-                this.data.settings.yAxis.show) {
-                    marginLeft = this.margin.left;
-                } else {
-                    marginLeft = 10;
-                }
+            var marginRight = this.margin.right;
+            if (this.data.settings.yAxis && this.data.settings.yAxis.show) {
+                marginRight += PulseChart.MaxWidthOfYAxis;
+            }
 
-            height = this.viewport.height - this.margin.top - marginBottom;
-            width = this.viewport.width - marginLeft - this.margin.right - PulseChart.MaxWidthOfYAxis;
+            var height = this.viewport.height - this.margin.top - marginBottom;
+            var width = this.viewport.width - this.margin.left - marginRight;
 
             height = Math.max(height, PulseChart.DefaultViewport.height);
             width  = Math.max(width, PulseChart.DefaultViewport.width);
@@ -2471,7 +2466,7 @@ module powerbi.visuals.samples {
                                     ? (-1 * (marginTop + height - shiftY))
                                     : shiftY,
                     x: PulseChart.PopupTextPadding,
-                    width: width - PulseChart.PopupTextPadding,
+                    width: width - PulseChart.PopupTextPadding * 2,
                     height: height - shiftY,
                 };
             };
@@ -2561,12 +2556,14 @@ module powerbi.visuals.samples {
                 PulseChart.Properties["popup"]["showType"],
                 PulseChart.DefaultSettings.popup.showType);
 
-            var width = Math.max(1, Math.min(999999, DataViewObjects.getValue<number>(
+            var width = Math.max(PulseChart.PopupMinWidth,
+                Math.min(PulseChart.PopupMaxWidth, DataViewObjects.getValue<number>(
                 objects,
                 PulseChart.Properties["popup"]["width"],
                 PulseChart.DefaultSettings.popup.width)));
 
-            var height: number = Math.max(1, Math.min(200, DataViewObjects.getValue<number>(
+            var height: number = Math.max(PulseChart.PopupMinHeight,
+                Math.min(PulseChart.PopupMaxHeight, DataViewObjects.getValue<number>(
                 objects,
                 PulseChart.Properties["popup"]["height"],
                 PulseChart.DefaultSettings.popup.height)));
