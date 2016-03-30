@@ -1447,14 +1447,24 @@ module powerbi.visuals.samples {
             dateFormat: PulseChartXAxisDateFormat): PulseChartXAxisProperties[] {
 
             var scales = this.getXAxisScales(series, isScalar, originalScale);
-            var rotate = this.isRotatedXAxisTicks(scales);
-            var xAxisProperties: PulseChartXAxisProperties[] = scales.map((scale: D3.Scale.TimeScale | D3.Scale.LinearScale) => {
-                return <PulseChartXAxisProperties> {
-                    values: this.getXAxisValuesToDisplay(scale, rotate, isScalar, dateFormat),
-                    scale: scale,
-                    rotate: rotate
-                };
-            });
+            var xAxisProperties = new Array<PulseChartXAxisProperties>(scales.length);
+
+            for(var i = 0, rotate = false; i < xAxisProperties.length; i++) {
+                var values = this.getXAxisValuesToDisplay(<any>scales[i], rotate, isScalar, dateFormat);
+
+                if(!rotate 
+                   && this.data.settings.xAxis.position === XAxisPosition.Bottom
+                   && values.length < PulseChart.MinimumTicksToRotate) {
+                    var rotatedValues = this.getXAxisValuesToDisplay(<any>scales[i], true, isScalar, dateFormat);
+                    if(rotatedValues.length > values.length) {
+                        rotate = true;
+                        i = -1;
+                        continue;
+                     }
+                }
+
+                xAxisProperties[i] = <PulseChartXAxisProperties>{ values: values, scale: scales[i], rotate: rotate };
+            }
 
             formatterOptions.tickCount = xAxisProperties.length && xAxisProperties.map(x => x.values.length).reduce((a,b) => a + b);
             xAxisProperties.forEach((properties: PulseChartXAxisProperties) => {
@@ -1482,15 +1492,6 @@ module powerbi.visuals.samples {
                     minX: number = originalScale(dataPoints[0].categoryValue),
                     maxX: number = originalScale(dataPoints[dataPoints.length - 1].categoryValue);
                 return PulseChart.createScale(isScalar, [minValue, maxValue], minX, maxX);
-            });
-        }
-
-        private isRotatedXAxisTicks(scales: D3.Scale.GenericScale<D3.Scale.TimeScale | D3.Scale.LinearScale>[]): boolean {
-              return this.data.settings.xAxis.position === XAxisPosition.Bottom && scales.some((scale: D3.Scale.TimeScale | D3.Scale.LinearScale) => {
-                var tickWidth = this.data.widthOfXAxisLabel;
-                var width = scale.range()[1] - scale.range()[0];
-                var maxTicks = Math.floor((width + PulseChart.XAxisTickSpace) / (tickWidth + PulseChart.XAxisTickSpace));
-                return maxTicks < PulseChart.MinimumTicksToRotate;
             });
         }
 
