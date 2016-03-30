@@ -269,6 +269,7 @@ module powerbi.visuals.samples {
     }
 
     export class PulseChart implements IVisual {
+        public static ClickTouchEvent = ('ontouchstart' in window || navigator.msMaxTouchPoints) ? "touchstart" : "click";
 
         public static RoleDisplayNames = <PulseChartDataRoles<string>> {
             Timestamp: "Timestamp",
@@ -2161,7 +2162,7 @@ module powerbi.visuals.samples {
                     d3.select(this)
                         .attr("r", d.eventSize || dotSize);
                 })*/
-                .on("click", (d: PulseChartDataPoint) => {
+                .on(PulseChart.ClickTouchEvent, (d: PulseChartDataPoint) => {
                     d3.event.stopPropagation();
                     sm.select(d.identity, d3.event.ctrlKey)
                         .then((selectionIds: SelectionId[]) => this.setSelection(selectionIds));
@@ -3150,7 +3151,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationPlay
-                .on("click", () => this.play());
+                .on(PulseChart.ClickTouchEvent, () => this.play());
 
             this.animationPlay
                 .append("path")
@@ -3164,7 +3165,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationPause
-                .on("click", () => this.stop());
+                .on(PulseChart.ClickTouchEvent, () => this.stop());
 
             this.animationPause
                 .append("path")
@@ -3178,7 +3179,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationReset
-                .on("click", () => this.reset());
+                .on(PulseChart.ClickTouchEvent, () => this.reset());
 
             this.animationReset
                 .append("path")
@@ -3193,7 +3194,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationPrev
-                .on("click", () => this.prev());
+                .on(PulseChart.ClickTouchEvent, () => this.prev());
 
             this.animationPrev
                 .append("path")
@@ -3208,7 +3209,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationNext
-                .on("click", () => this.next());
+                .on(PulseChart.ClickTouchEvent, () => this.next());
 
             this.animationNext
                 .append("path")
@@ -3224,7 +3225,7 @@ module powerbi.visuals.samples {
                 .attr("r", 10)
                 .attr("fill", "transparent");
             this.animationToEnd
-                .on("click", () => this.toEnd());
+                .on(PulseChart.ClickTouchEvent, () => this.toEnd());
 
             this.animationToEnd
                 .append("path")
