@@ -1243,6 +1243,10 @@ module powerbi.visuals.samples {
         }
 
         private getDataArrayToCompare(data: PulseChartData): any[] {
+            if(!data || !data.series) {
+                return null;
+            }
+
             var dataPoints = <PulseChartDataPoint[]>_.flatten(data.series.map(x => x.data));
             return _.flatten(dataPoints.map(x => 
             {
@@ -3493,9 +3497,9 @@ module powerbi.visuals.samples {
 
             this.stop();
 
-            var newIndex: PulseChartAnimationPosition = this.chart.findNextPoint(this.position);
-            if (newIndex) {
-                this.position = newIndex;
+            var newPosition: PulseChartAnimationPosition = this.chart.findNextPoint(this.position);
+            if (newPosition) {
+                this.position = newPosition;
                 this.chart.renderChart();
             } else {
                 this.toEnd();
@@ -3508,9 +3512,13 @@ module powerbi.visuals.samples {
             }
 
             this.stop();
-            var newIndex: PulseChartAnimationPosition = this.chart.findPrevPoint(this.position);
-            if (newIndex) {
-                this.position = newIndex;
+            var newPosition: PulseChartAnimationPosition = this.chart.findPrevPoint(this.position);
+            if (newPosition) {
+                if(newPosition.series !== this.position.series) {
+                    this.chart.clearChart();
+                }
+
+                this.position = newPosition;
                 this.chart.renderChart();
             } else {
                 this.reset();
