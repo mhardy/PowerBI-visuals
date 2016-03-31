@@ -2053,14 +2053,7 @@ module powerbi.visuals.samples {
                         .attr("cy", y);
 
                 interpolatedLine.push({ "x": x, "y": y });
-
-                var position: PulseChartAnimationPosition = this.animationHandler.position;
-                var index: number = interpolateIndex(t);
-                this.animationHandler.position = {
-                    series: position.series,
-                    index: index,
-                };
-
+                this.animationHandler.position.index = interpolateIndex(t);
                 return lineFunction(interpolatedLine);
             };
         }
@@ -3088,6 +3081,10 @@ module powerbi.visuals.samples {
                 });
             }
         }
+
+        public destroy(): void {
+            this.clearAll(true);
+        }
     }
 
     enum PulseAnimatorStates {
@@ -3118,8 +3115,9 @@ module powerbi.visuals.samples {
         private static RunnerCounter: ClassAndSelector = createClassAndSelector('runnerCounter');
         private animatorState: PulseAnimatorStates;
 
-        private static animationMinSeries: number = 0;
-        private static animationMinIndex: number = 0;
+        public static get AnimationMinPosition(): PulseChartAnimationPosition {
+            return { series: 0, index: 0 };
+        }
 
         private container: D3.Selection;
 
@@ -3243,13 +3241,8 @@ module powerbi.visuals.samples {
         }
 
         private setDefaultValues() {
-            this.position  = {
-                series: PulseAnimator.animationMinSeries,
-                index: PulseAnimator.animationMinIndex
-            };
-
+            this.position = PulseAnimator.AnimationMinPosition;
             this.animatorState = PulseAnimatorStates.Ready;
-
             this.runnerCounterValue = null;
         }
 
@@ -3452,17 +3445,15 @@ module powerbi.visuals.samples {
         }
 
         public playNext(): void {
-
             this.pause();
-            var position: PulseChartAnimationPosition = this.position;
 
-            if (this.chart.isAnimationSeriesLast(position)) {
+            if (this.chart.isAnimationSeriesLast(this.position)) {
                 this.setDefaultValues();
                 this.chart.clearSelection();
             } else {
                 this.position = {
-                    series: position.series + 1,
-                    index: PulseAnimator.animationMinIndex,
+                    series: this.position.series + 1,
+                    index: PulseAnimator.AnimationMinPosition.index,
                 };
                 this.play();
             }
@@ -3526,7 +3517,6 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
-
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3540,7 +3530,6 @@ module powerbi.visuals.samples {
         }
 
         public stop(): void {
-
             if (!this.isAnimated()) {
                 return;
             }
@@ -3566,10 +3555,10 @@ module powerbi.visuals.samples {
         }
 
         public clear(): void {
-
             if (this.isAnimated()) {
                 this.chart.stopAnimation();
             }
+
             this.setDefaultValues();
             this.container.style('display', 'none');
         }
