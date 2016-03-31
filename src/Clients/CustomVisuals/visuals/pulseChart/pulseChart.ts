@@ -156,8 +156,8 @@ module powerbi.visuals.samples {
         playSpeed: number;
         autoplay: boolean;
         autoplayPauseDuration: number;
-
         color: string;
+        position: PulseChartAnimationPosition;
     }
 
     export interface PulseChartRunnerCounterSettings {
@@ -550,6 +550,10 @@ module powerbi.visuals.samples {
                             displayName: "Buttons Color",
                             type: { fill: { solid: { color: true } } }
                         },
+                        position: {
+                            displayName: "Position",
+                            type: { text: true }
+                        }
                     }
                 },
                 runnerCounter: {
@@ -733,6 +737,7 @@ module powerbi.visuals.samples {
                 pauseDuration: 10,
                 autoplayPauseDuration: 0,
                 color: "#777",
+                position: null,
             },
             runnerCounter: {
                 show: true,
@@ -762,7 +767,7 @@ module powerbi.visuals.samples {
         private animationHandler: PulseAnimator;
         private behavior: IInteractiveBehavior;
         private colors: IDataColorPalette;
-        private host: IVisualHostServices;
+        public host: IVisualHostServices;
 
         private static DefaultMargin: IMargin = {
             top: 140,
@@ -1892,7 +1897,6 @@ module powerbi.visuals.samples {
         }
 
         public pauseAnimation(): void {
-
             if (!this.animationSelection) {
                 return;
             }
@@ -2819,6 +2823,16 @@ module powerbi.visuals.samples {
 
             playbackSettings.color = colorHelper.getColorForMeasure(objects, "");
 
+            try 
+            {
+                playbackSettings.position = JSON.parse(DataViewObjects.getValue<string>(objects, properties["position"]));
+                console.log("update " + DataViewObjects.getValue<string>(objects, properties["position"]));
+            }
+            catch(ex) 
+            {}
+
+            playbackSettings.position = playbackSettings.position || defaultSettings.position;
+
             return playbackSettings;
         }
 
@@ -2863,6 +2877,7 @@ module powerbi.visuals.samples {
             this.gaps.selectAll(PulseChart.Gap.selector).remove();
 
             if (this.animationHandler) {
+                this.animationHandler.reset();
                 this.animationHandler.clear();
             }
 
@@ -3250,9 +3265,25 @@ module powerbi.visuals.samples {
             this.renderControls();
             this.disableControls();
 
+            if(isAutoPlay
+                && this.animatorState === PulseAnimatorStates.Play
+                && !this.isPositionWasSaved
+                && !_.isEqual(this.autoPlayPosition, this.savedPosition)) {
+                this.chart.stopAnimation();
+                this.animatorState = PulseAnimatorStates.Ready;
+            }
+
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.play();
             } else if (isAutoPlay && (this.animatorState === PulseAnimatorStates.Ready)) {
+                console.log("loaded " + JSON.stringify(this.savedPosition));
+                this.autoPlayPosition = this.savedPosition;
+                if(this.savedPosition
+                    && this.savedPosition.series < this.chart.data.series.length
+                    && this.savedPosition.index < this.chart.data.series[this.savedPosition.series].data.length) {
+                    this.position = this.savedPosition;
+                }
+
                 this.play();
             } else {
                 this.chart.renderChart();
@@ -3424,7 +3455,6 @@ module powerbi.visuals.samples {
         }
 
         public play(): void {
-
             if (this.animatorState === PulseAnimatorStates.Play) {
                 return;
             }
@@ -3468,7 +3498,7 @@ module powerbi.visuals.samples {
             this.disableControls();
         }
 
-        private reset(): void {
+        public reset(): void {
 
             this.chart.stopAnimation();
             this.chart.clearSelection();
@@ -3478,6 +3508,7 @@ module powerbi.visuals.samples {
             this.animatorState = PulseAnimatorStates.Stopped;
 
             this.disableControls();
+            this.savedPosition = null;
         }
 
         private next(): void {
@@ -3517,6 +3548,8 @@ module powerbi.visuals.samples {
         }
 
         private toEnd(): void {
+            this.savedPosition = null;
+
             this.chart.stopAnimation();
             this.chart.clearSelection();
             this.chart.clearChart();
@@ -3526,7 +3559,6 @@ module powerbi.visuals.samples {
             this.disableControls();
 
             this.chart.renderChart();
-
         }
 
         public stop(): void {
@@ -3534,6 +3566,7 @@ module powerbi.visuals.samples {
                 return;
             }
 
+            this.savedPosition = this.position;
             this.chart.stopAnimation();
             this.animatorState = PulseAnimatorStates.Stopped;
 
@@ -3551,7 +3584,29 @@ module powerbi.visuals.samples {
         }
 
         public get flooredPosition(): PulseChartAnimationPosition {
-            return { series: this.position.series, index: Math.floor(this.position.index) };
+            return this.position && { series: this.position.series, index: Math.floor(this.position.index) };
+        }
+
+        private isPositionWasSaved: boolean = false;
+        private autoPlayPosition: PulseChartAnimationPosition;
+        public set savedPosition(position: PulseChartAnimationPosition) {
+            if(this.chart.data && this.chart.data.settings && this.chart.data.settings.playback) {
+                console.log("saved " + JSON.stringify(position));
+                this.isPositionWasSaved = true;
+                this.chart.host.persistProperties(<VisualObjectInstancesToPersist>{
+                        merge: [{
+                        objectName: "playback",
+                        selector: null,
+                        properties: { position: position && JSON.stringify(position) || "" }
+                    }]});
+            }
+        }
+
+        public get savedPosition(): PulseChartAnimationPosition {
+            return this.chart.data 
+                && this.chart.data.settings
+                && this.chart.data.settings.playback 
+                && this.chart.data.settings.playback.position;
         }
 
         public clear(): void {
