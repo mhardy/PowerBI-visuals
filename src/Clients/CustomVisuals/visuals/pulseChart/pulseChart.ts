@@ -1022,12 +1022,7 @@ module powerbi.visuals.samples {
 
                 var categorical: DataViewCategorical = dataView.categorical;
                 var y0_group = groupedIdentity.values[valueMeasureIndex];
-                //console.log('y0_group', y0_group);
-                //var y1_group = groupedIdentity.values[valueMeasureIndex];
-
                 var y0 = y0_group.values[categoryIndex];
-                //var y1 = y1_group.values[categoryIndex];
-                ////console.log('y0', y0);
 
                 if (y0 === null) {
                     y0_group = grouped[1] && grouped[1].values[valueMeasureIndex];
@@ -1733,11 +1728,8 @@ module powerbi.visuals.samples {
         }
 
         public renderChart(): void {
-
             var data: PulseChartData = this.data;
             var series: PulseChartSeries[] = this.data.series;
-            var sm: SelectionManager = this.selectionManager;
-
             var selection: D3.UpdateSelection = this.rootSelection = this.chart.selectAll(PulseChart.LineNode.selector).data(series);
 
             var lineNode = selection
@@ -1760,8 +1752,8 @@ module powerbi.visuals.samples {
             if (this.animationHandler.isAnimated()) {
                 this.showAnimationDot();
 
-                if (sm.hasSelection()) {
-                    this.drawTooltips(data, sm.getSelectionIds());
+                if (this.selectionManager.hasSelection()) {
+                    this.drawTooltips(data, this.selectionManager.getSelectionIds());
                 }
             } else {
                 this.hideAnimationDot();
@@ -2063,9 +2055,7 @@ module powerbi.visuals.samples {
         }
 
         public clearSelection(): void {
-            var sm: SelectionManager = this.selectionManager;
-            sm.clear();
-
+            this.selectionManager.clear();
             this.chart.selectAll(PulseChart.Tooltip.selector).remove();
         }
 
@@ -2125,7 +2115,6 @@ module powerbi.visuals.samples {
                 node: ClassAndSelector = PulseChart.Dot,
                 nodeParent: ClassAndSelector = PulseChart.DotsContainer,
                 rootSelection: D3.UpdateSelection = this.rootSelection,
-                sm: SelectionManager = this.selectionManager,
                 dotColor: string = this.data.settings.dots.color,
                 dotSize: number = this.data.settings.dots.size,
                 dotTransparency: number = this.getDotTransparency(),
@@ -2166,7 +2155,7 @@ module powerbi.visuals.samples {
                 })*/
                 .on(PulseChart.ClickTouchEvent, (d: PulseChartDataPoint) => {
                     d3.event.stopPropagation();
-                    sm.select(d.identity, d3.event.ctrlKey)
+                    this.selectionManager.select(d.identity, d3.event.ctrlKey)
                         .then((selectionIds: SelectionId[]) => this.setSelection(selectionIds));
                 });
 
@@ -2826,7 +2815,7 @@ module powerbi.visuals.samples {
             try 
             {
                 playbackSettings.position = JSON.parse(DataViewObjects.getValue<string>(objects, properties["position"]));
-                console.log("update " + DataViewObjects.getValue<string>(objects, properties["position"]));
+                //console.log("update " + DataViewObjects.getValue<string>(objects, properties["position"]));
             }
             catch(ex) 
             {}
@@ -2893,7 +2882,29 @@ module powerbi.visuals.samples {
            this.hideAnimationDot();
            this.chart.selectAll(PulseChart.Line.selector).remove();
            this.chart.selectAll(PulseChart.Dot.selector).remove();
-           this.chart.selectAll(PulseChart.Tooltip.selector).remove();
+        }
+
+        public clearRedundant(position: PulseChartAnimationPosition): void {
+            if(!this.data) {
+                return;
+            }
+
+            var popups = this.chart.selectAll(PulseChart.Tooltip.selector).filter((data: PulseChartDataPoint) => {
+                return data.seriesIndex < position.series || data.seriesIndex === position.series 
+                    && this.data.series[data.seriesIndex].data[position.index].value >= data.value;
+            });
+
+            var selectedPopupsIds = popups.data().map((data: PulseChartDataPoint) => data.identity);
+            this.clearSelection();
+
+            if(selectedPopupsIds.length) {
+               var popupsSelecting = selectedPopupsIds.map(id => this.selectionManager.select(id, true));
+               (<JQueryPromise<{}>>$.when.apply(null, popupsSelecting))
+                   .then((selectionIds: SelectionId[]) => this.setSelection(selectionIds));
+            }
+
+            this.chart.selectAll(PulseChart.Line.selector).remove();
+            this.chart.selectAll(PulseChart.Dot.selector).remove();
         }
 
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
@@ -3276,7 +3287,7 @@ module powerbi.visuals.samples {
             if (this.animatorState === PulseAnimatorStates.Play) {
                 this.play();
             } else if (isAutoPlay && (this.animatorState === PulseAnimatorStates.Ready)) {
-                console.log("loaded " + JSON.stringify(this.savedPosition));
+                //console.log("loaded " + JSON.stringify(this.savedPosition));
                 this.autoPlayPosition = this.savedPosition;
                 if(this.savedPosition
                     && this.savedPosition.series < this.chart.data.series.length
@@ -3536,10 +3547,7 @@ module powerbi.visuals.samples {
             this.stop();
             var newPosition: PulseChartAnimationPosition = this.chart.findPrevPoint(this.position);
             if (newPosition) {
-                if(newPosition.series !== this.position.series) {
-                    this.chart.clearChart();
-                }
-
+                this.chart.clearRedundant(newPosition);
                 this.position = newPosition;
                 this.chart.renderChart();
             } else {
@@ -3591,7 +3599,7 @@ module powerbi.visuals.samples {
         private autoPlayPosition: PulseChartAnimationPosition;
         public set savedPosition(position: PulseChartAnimationPosition) {
             if(this.chart.data && this.chart.data.settings && this.chart.data.settings.playback) {
-                console.log("saved " + JSON.stringify(position));
+                //console.log("saved " + JSON.stringify(position));
                 this.isPositionWasSaved = true;
                 this.chart.host.persistProperties(<VisualObjectInstancesToPersist>{
                         merge: [{
@@ -3632,7 +3640,7 @@ module powerbi.visuals.samples {
                 behaviors[i].bindEvents(options.layerOptions[i], selectionHandler);
             }
 
-            options.clearCatcher.on('click', () => {
+            options.clearCatcher.on(PulseChart.ClickTouchEvent, () => {
                 selectionHandler.handleClearSelection();
             });
         }
